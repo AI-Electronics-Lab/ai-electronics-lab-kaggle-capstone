@@ -40,3 +40,11 @@
 - Added the series-capacitor, shunt-resistor RC high-pass topology block and registry descriptor.
 - Added deterministic graph validation and SPICE connectivity coverage without extending schematic
   rendering or adding plan adaptation and simulation behavior.
+
+## Deterministic resistive-divider topology
+
+- Added the passive upper-resistor, lower-resistor divider topology and registry descriptor.
+- Recorded source-independent divider ratio and Thevenin resistance metrics in deterministic graph
+  metadata.
+- Added DC-only graph validation and passive SPICE connectivity coverage without adding a voltage
+  source, plan adaptation, or schematic changes.
