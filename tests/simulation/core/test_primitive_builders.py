@@ -4,6 +4,7 @@ import pytest
 
 from ai_electronics_lab.simulation.core import CircuitGraph, CircuitGraphError
 from ai_electronics_lab.simulation.core.primitive_builders import (
+    build_ac_voltage_source,
     build_bjt,
     build_capacitor,
     build_dc_current_source,
@@ -54,6 +55,33 @@ def test_dc_current_source_builder_renders_renderer_safe_output():
             ".end",
         ]
     )
+
+
+def test_ac_voltage_source_builder_renders_deterministically():
+    graph = CircuitGraph(name="ac_source_demo")
+
+    component = build_ac_voltage_source(graph, "V1", "vin", "0", 1.0, phase_deg=0.0)
+
+    assert component.parameters == {"ac_magnitude": 1.0, "ac_phase_deg": 0.0}
+    assert render_spice_netlist(graph.to_netlist_ir()) == "\n".join(
+        ["* ac_source_demo", "V1 vin 0 AC 1 0", ".end"]
+    )
+
+
+@pytest.mark.parametrize("magnitude", [0, -1, True, float("nan"), float("inf")])
+def test_ac_voltage_source_builder_rejects_invalid_magnitude(magnitude):
+    graph = CircuitGraph(name="demo")
+
+    with pytest.raises(CircuitGraphError):
+        build_ac_voltage_source(graph, "V1", "vin", "0", magnitude)
+
+
+@pytest.mark.parametrize("phase", [True, float("nan"), float("inf")])
+def test_ac_voltage_source_builder_rejects_invalid_phase(phase):
+    graph = CircuitGraph(name="demo")
+
+    with pytest.raises(CircuitGraphError):
+        build_ac_voltage_source(graph, "V1", "vin", "0", 1.0, phase_deg=phase)
 
 
 def test_bjt_builder_renders_renderer_safe_output():
