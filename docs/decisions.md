@@ -25,3 +25,10 @@ Support RC low-pass, RC high-pass, and resistive divider before adding BJT circu
 ## ADR-006: Direct Linux installation first
 
 Docker is deferred until a clean direct installation works.
+
+## ADR-007: Versioned CircuitPlan validation boundary
+
+Use a frozen standard-library `CircuitPlan` as the canonical planner output. Version 1.0 supports
+only RC low-pass, RC high-pass, and resistive-divider plans. Semantic validation returns stable,
+structured errors; deterministic consumers require validity through a raising helper before using
+the plan. Circuit graphs and netlists remain separate downstream representations.
