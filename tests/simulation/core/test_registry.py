@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.ai_electronics_lab.simulation.core import (
+from ai_electronics_lab.simulation.core import (
     RegistryContract,
     RegistryDescriptor,
     RegistryDuplicateError,

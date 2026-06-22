@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from src.ai_electronics_lab.simulation.core import CircuitGraph
-from src.ai_electronics_lab.simulation.core.spice_renderer import SpiceRendererError, render_spice_netlist
+from ai_electronics_lab.simulation.core import CircuitGraph
+from ai_electronics_lab.simulation.core.spice_renderer import (
+    SpiceRendererError,
+    render_spice_netlist,
+)
 
 
 def build_renderable_rc_graph() -> CircuitGraph:

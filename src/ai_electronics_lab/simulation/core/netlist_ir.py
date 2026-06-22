@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import copy
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
-import copy
-import json
 
-from .circuit_graph import CircuitComponent, CircuitGraph, CircuitNode, _freeze_mapping, _sorted_mapping
+from .circuit_graph import (
+    CircuitComponent,
+    CircuitGraph,
+    CircuitNode,
+    _freeze_mapping,
+    _sorted_mapping,
+)
 
 
 @dataclass(frozen=True, slots=True)

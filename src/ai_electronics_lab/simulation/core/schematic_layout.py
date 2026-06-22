@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any, Mapping
-import copy
-import json
 
-from .circuit_graph import CircuitComponent, CircuitGraph, CircuitGraphError, CircuitPort, _freeze_mapping, _sorted_mapping
+from .circuit_graph import (
+    CircuitComponent,
+    CircuitGraph,
+    CircuitGraphError,
+    _freeze_mapping,
+    _sorted_mapping,
+)
 
 __all__ = [
     "SchematicComponentLayout",

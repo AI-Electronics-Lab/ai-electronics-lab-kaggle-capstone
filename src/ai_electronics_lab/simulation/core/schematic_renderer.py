@@ -242,7 +242,7 @@ def _render_ground_symbol(*, x: float, y: float, label: str, class_name: str, da
         f"<line x1='{x - 11:.1f}' y1='{y + 24:.1f}' x2='{x + 11:.1f}' y2='{y + 24:.1f}' stroke='#f8fafc' stroke-width='4' stroke-linecap='round'/>",
         f"<line x1='{x - 6:.1f}' y1='{y + 32:.1f}' x2='{x + 6:.1f}' y2='{y + 32:.1f}' stroke='#f8fafc' stroke-width='4' stroke-linecap='round'/>",
         f"<circle cx='{x:.1f}' cy='{y:.1f}' r='5.5' fill='#f8fafc' stroke='#f8fafc' stroke-width='1.0'/>",
-        f"</g>",
+        "</g>",
     ]
 
 
@@ -251,7 +251,7 @@ def _render_probe_symbol(x: float, y: float, label: str) -> list[str]:
         f"<g class=\"probe-symbol\" data-name='{escape(label)}'>",
         f"<circle cx='{x:.1f}' cy='{y:.1f}' r='12' fill='none' stroke='#f8fafc' stroke-width='3'/>",
         f"<path d='M {x - 5:.1f} {y:.1f} L {x + 7:.1f} {y:.1f} M {x + 2:.1f} {y - 5:.1f} L {x + 7:.1f} {y:.1f} L {x + 2:.1f} {y + 5:.1f}' fill='none' stroke='#f8fafc' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/>",
-        f"</g>",
+        "</g>",
     ]
 
 

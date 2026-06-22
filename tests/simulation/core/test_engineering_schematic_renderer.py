@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from src.ai_electronics_lab.simulation.core.schematic_renderer import (
+from ai_electronics_lab.simulation.core.schematic_renderer import (
     build_engineering_schematic_svg,
     render_engineering_schematic_svg,
 )
-
 
 # ── Determinism ──────────────────────────────────────────────────────────────
 

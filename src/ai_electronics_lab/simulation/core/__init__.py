@@ -9,19 +9,6 @@ from .circuit_graph import (
     CircuitProbe,
 )
 from .netlist_ir import NetlistIR, NetlistStatement
-from .schematic_layout import (
-    SchematicComponentLayout,
-    SchematicLayout,
-    SchematicLayoutCheck,
-    SchematicNodeLayout,
-    SchematicPortLayout,
-    SchematicTerminalLayout,
-    SchematicTextLabel,
-    SchematicWireSegment,
-    build_rc_low_pass_schematic_layout,
-    build_series_resistor_shunt_capacitor_schematic_layout,
-)
-from .schematic_renderer import render_schematic_svg, render_engineering_schematic_svg, build_engineering_schematic_svg
 from .primitive_builders import (
     build_bjt,
     build_capacitor,
@@ -42,6 +29,23 @@ from .registry import (
     RegistryNotFoundError,
     RegistryUnsupportedKindError,
     RegistryValidationError,
+)
+from .schematic_layout import (
+    SchematicComponentLayout,
+    SchematicLayout,
+    SchematicLayoutCheck,
+    SchematicNodeLayout,
+    SchematicPortLayout,
+    SchematicTerminalLayout,
+    SchematicTextLabel,
+    SchematicWireSegment,
+    build_rc_low_pass_schematic_layout,
+    build_series_resistor_shunt_capacitor_schematic_layout,
+)
+from .schematic_renderer import (
+    build_engineering_schematic_svg,
+    render_engineering_schematic_svg,
+    render_schematic_svg,
 )
 from .spice_renderer import SpiceNetlistRenderer, SpiceRendererError, render_spice_netlist
 

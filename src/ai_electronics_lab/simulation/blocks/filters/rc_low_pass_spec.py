@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass
 from math import pi
 from typing import Iterable
-import re
-import unicodedata
 
 __all__ = [
     "RC_LOW_PASS_DEFAULT_CAPACITANCE_FARADS",

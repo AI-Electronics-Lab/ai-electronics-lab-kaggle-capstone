@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from src.ai_electronics_lab.simulation.blocks.filters.rc_low_pass_spec import (
+from ai_electronics_lab.simulation.blocks.filters.rc_low_pass_spec import (
     RC_LOW_PASS_DEFAULT_CAPACITANCE_FARADS,
     RcLowPassPromptSpec,
     RcLowPassSpecError,

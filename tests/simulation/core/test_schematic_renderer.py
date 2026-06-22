@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.ai_electronics_lab.simulation.blocks.filters import build_rc_low_pass
-from src.ai_electronics_lab.simulation.core import (
+from ai_electronics_lab.simulation.blocks.filters import build_rc_low_pass
+from ai_electronics_lab.simulation.core import (
     CircuitGraph,
     SchematicComponentLayout,
     SchematicLayout,
