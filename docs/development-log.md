@@ -48,3 +48,10 @@
   metadata.
 - Added DC-only graph validation and passive SPICE connectivity coverage without adding a voltage
   source, plan adaptation, or schematic changes.
+
+## Deterministic CircuitPlan adapter
+
+- Added validation-before-dispatch conversion from the canonical `CircuitPlan` to the three trusted
+  topology builders using fixed input, output, and ground nodes.
+- Preserved canonical plan data as inert provenance metadata while deferring sources, requested
+  sweep construction, analysis execution, and divider input voltage to a later assembly layer.
