@@ -34,3 +34,9 @@
 - Added an immutable standard-library contract with defensive copying, deterministic serialization,
   structured validation errors, and a raising validation helper.
 - Added focused coverage for valid plans and deterministic rejection boundaries.
+
+## Deterministic RC high-pass topology
+
+- Added the series-capacitor, shunt-resistor RC high-pass topology block and registry descriptor.
+- Added deterministic graph validation and SPICE connectivity coverage without extending schematic
+  rendering or adding plan adaptation and simulation behavior.

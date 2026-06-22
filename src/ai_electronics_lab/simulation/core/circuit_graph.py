@@ -412,6 +412,75 @@ class CircuitGraph:
 
         self.validate_artifact_consistency()
 
+    def validate_rc_high_pass_topology(self) -> None:
+        self.validate_integrity()
+
+        capability_id = self.capability_metadata.get("capability_id")
+        if capability_id != "rc_high_pass":
+            raise CircuitGraphError("RC high-pass capability metadata is missing or incorrect")
+
+        archetype_id = self.archetype_metadata.get("archetype_id")
+        if archetype_id != "rc_high_pass_vertical_slice":
+            raise CircuitGraphError("RC high-pass archetype metadata is missing or incorrect")
+
+        topology = self.archetype_metadata.get("topology")
+        if topology != "series_capacitor_shunt_resistor":
+            raise CircuitGraphError("RC high-pass topology metadata is missing or incorrect")
+
+        if len(self._ports) != 3:
+            raise CircuitGraphError("RC high-pass graph must declare exactly three ports")
+        port_by_role = {port.role: port for port in self._ports.values()}
+        required_roles = {"input", "output", "ground"}
+        if set(port_by_role) != required_roles:
+            raise CircuitGraphError("RC high-pass graph must declare input, output, and ground ports")
+
+        input_port = port_by_role["input"]
+        output_port = port_by_role["output"]
+        ground_port = port_by_role["ground"]
+        if input_port.name != "VIN" or output_port.name != "VOUT" or ground_port.name != "GND":
+            raise CircuitGraphError("RC high-pass ports must be named VIN, VOUT, and GND")
+
+        input_net = input_port.net
+        output_net = output_port.net
+        ground_net = ground_port.net
+        if len({input_net, output_net, ground_net}) != 3:
+            raise CircuitGraphError("input, output, and ground nets must be distinct")
+
+        if set(self._components) != {"C1", "R1"}:
+            raise CircuitGraphError("RC high-pass graph must contain only C1 and R1 components")
+
+        capacitor = self.get_component("C1")
+        resistor = self.get_component("R1")
+        if capacitor.kind != "capacitor":
+            raise CircuitGraphError("C1 must be a capacitor")
+        if resistor.kind != "resistor":
+            raise CircuitGraphError("R1 must be a resistor")
+
+        for component in (capacitor, resistor):
+            terminal_nodes = tuple(component.terminals.values())
+            if len(set(terminal_nodes)) != len(terminal_nodes):
+                raise CircuitGraphError(f"component {component.refdes} creates a direct short")
+
+        capacitor_nodes = set(capacitor.terminals.values())
+        resistor_nodes = set(resistor.terminals.values())
+        if capacitor_nodes != {input_net, output_net}:
+            raise CircuitGraphError("RC high-pass capacitor must connect input to output")
+        if resistor_nodes != {output_net, ground_net}:
+            raise CircuitGraphError("RC high-pass resistor must connect output to ground")
+
+        if set(self._analyses) != {"ac", "dc", "transient"} or any(
+            analysis.name != analysis.kind for analysis in self._analyses.values()
+        ):
+            raise CircuitGraphError("RC high-pass graph must declare ac, dc, and transient analyses")
+
+        probe_names = {probe.name for probe in self._probes.values()}
+        if probe_names != {"transfer_function", "vin_voltage", "vout_voltage"}:
+            raise CircuitGraphError(
+                "RC high-pass graph must declare vin_voltage, vout_voltage, and transfer_function probes"
+            )
+
+        self.validate_artifact_consistency()
+
     def to_dict(self) -> dict[str, Any]:
         self.validate_integrity()
         return {
