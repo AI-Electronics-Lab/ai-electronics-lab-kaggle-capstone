@@ -27,3 +27,10 @@
 - Added local verification for linting, tests, and package imports.
 - Added GitHub Actions CI using the same locked environment.
 - Deferred global line-length reformatting so this infrastructure change remains reviewable.
+
+## Canonical CircuitPlan contract
+
+- Specified the version 1.0 planner-to-deterministic-code boundary for the three initial topologies.
+- Added an immutable standard-library contract with defensive copying, deterministic serialization,
+  structured validation errors, and a raising validation helper.
+- Added focused coverage for valid plans and deterministic rejection boundaries.
