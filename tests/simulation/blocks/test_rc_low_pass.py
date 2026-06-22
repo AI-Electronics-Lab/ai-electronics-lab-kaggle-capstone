@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from src.ai_electronics_lab.simulation.core import CircuitGraphError, RegistryContract
-from src.ai_electronics_lab.simulation.core.spice_renderer import render_spice_netlist
-from src.ai_electronics_lab.simulation.blocks.filters.rc_low_pass import (
+from ai_electronics_lab.simulation.blocks.filters.rc_low_pass import (
     RC_LOW_PASS_BLOCK,
     build_rc_low_pass,
 )
+from ai_electronics_lab.simulation.core import CircuitGraphError, RegistryContract
+from ai_electronics_lab.simulation.core.spice_renderer import render_spice_netlist
 
 
 def test_rc_low_pass_block_exposes_a_registry_descriptor():

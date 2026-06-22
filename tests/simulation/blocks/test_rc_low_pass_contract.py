@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from src.ai_electronics_lab.simulation.blocks.filters import build_rc_low_pass
+from ai_electronics_lab.simulation.blocks.filters import build_rc_low_pass
 
 
 def test_rc_low_pass_contract_serializes_source_of_truth_metadata():

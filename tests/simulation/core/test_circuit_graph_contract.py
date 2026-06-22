@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from src.ai_electronics_lab.simulation.blocks.filters import build_rc_low_pass
-from src.ai_electronics_lab.simulation.core import CircuitGraph, CircuitGraphError
+from ai_electronics_lab.simulation.blocks.filters import build_rc_low_pass
+from ai_electronics_lab.simulation.core import CircuitGraph, CircuitGraphError
 
 
 def test_rc_low_pass_graph_exposes_ports_probes_analyses_and_json_contract():

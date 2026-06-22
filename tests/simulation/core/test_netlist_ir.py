@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.ai_electronics_lab.simulation.core import CircuitGraph
+from ai_electronics_lab.simulation.core import CircuitGraph
 
 
 def build_simple_rc_graph() -> CircuitGraph:

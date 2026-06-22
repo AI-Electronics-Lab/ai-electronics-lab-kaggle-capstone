@@ -18,3 +18,12 @@
 - Ran the isolated baseline test suite successfully before copying.
 - Imported only the approved deterministic core and focused tests.
 - Kept private Git history and production infrastructure outside this repository.
+
+## Reproducible Python project foundation
+
+- Added an installable `pyproject.toml` using the standard `src` package layout.
+- Replaced repository-relative test imports with installed-package imports.
+- Added a locked uv development environment.
+- Added local verification for linting, tests, and package imports.
+- Added GitHub Actions CI using the same locked environment.
+- Deferred global line-length reformatting so this infrastructure change remains reviewable.

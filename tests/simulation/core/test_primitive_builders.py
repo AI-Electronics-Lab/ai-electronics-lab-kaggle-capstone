@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.ai_electronics_lab.simulation.core import CircuitGraph, CircuitGraphError
-from src.ai_electronics_lab.simulation.core.primitive_builders import (
+from ai_electronics_lab.simulation.core import CircuitGraph, CircuitGraphError
+from ai_electronics_lab.simulation.core.primitive_builders import (
     build_bjt,
     build_capacitor,
     build_dc_current_source,
@@ -13,7 +13,7 @@ from src.ai_electronics_lab.simulation.core.primitive_builders import (
     build_sine_voltage_source,
     ensure_ground_node,
 )
-from src.ai_electronics_lab.simulation.core.spice_renderer import render_spice_netlist
+from ai_electronics_lab.simulation.core.spice_renderer import render_spice_netlist
 
 
 def test_primitive_builders_add_nodes_and_render_supported_primitives_deterministically():

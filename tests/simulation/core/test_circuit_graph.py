@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from src.ai_electronics_lab.simulation.core import CircuitGraph, CircuitGraphError
+from ai_electronics_lab.simulation.core import CircuitGraph, CircuitGraphError
 
 
 def build_simple_rc_graph() -> CircuitGraph:

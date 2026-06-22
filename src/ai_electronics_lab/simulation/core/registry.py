@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import copy
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
-import copy
 
 __all__ = [
     "RegistryContract",
