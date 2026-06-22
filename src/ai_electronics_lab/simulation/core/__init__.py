@@ -10,6 +10,7 @@ from .circuit_graph import (
 )
 from .netlist_ir import NetlistIR, NetlistStatement
 from .primitive_builders import (
+    build_ac_voltage_source,
     build_bjt,
     build_capacitor,
     build_dc_current_source,
@@ -84,6 +85,7 @@ __all__ = [
     "SpiceNetlistRenderer",
     "SpiceRendererError",
     "render_spice_netlist",
+    "build_ac_voltage_source",
     "build_bjt",
     "build_capacitor",
     "build_dc_current_source",

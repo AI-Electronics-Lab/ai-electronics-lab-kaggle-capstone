@@ -7,6 +7,7 @@ from typing import Any
 from .circuit_graph import CircuitComponent, CircuitGraph, CircuitGraphError, CircuitNode
 
 __all__ = [
+    "build_ac_voltage_source",
     "build_bjt",
     "build_capacitor",
     "build_dc_current_source",
@@ -128,6 +129,29 @@ def build_dc_voltage_source(
         parameters={"dc_volts": dc_volts},
         metadata=metadata,
         positive_parameter_names=(),
+    )
+
+
+def build_ac_voltage_source(
+    graph: CircuitGraph,
+    refdes: str,
+    positive: str,
+    negative: str,
+    ac_magnitude: float,
+    phase_deg: float = 0.0,
+    metadata: Mapping[str, Any] | None = None,
+) -> CircuitComponent:
+    """Add a deterministic small-signal AC voltage source to the graph."""
+
+    return _build_component(
+        graph=graph,
+        refdes=refdes,
+        kind="voltage_source",
+        terminal_names=("positive", "negative"),
+        node_names=(positive, negative),
+        parameters={"ac_magnitude": ac_magnitude, "ac_phase_deg": phase_deg},
+        metadata=metadata,
+        positive_parameter_names=("ac_magnitude",),
     )
 
 

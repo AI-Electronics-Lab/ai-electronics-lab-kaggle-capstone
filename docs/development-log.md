@@ -55,3 +55,11 @@
   topology builders using fixed input, output, and ground nodes.
 - Preserved canonical plan data as inert provenance metadata while deferring sources, requested
   sweep construction, analysis execution, and divider input voltage to a later assembly layer.
+
+## Deterministic simulation assembly
+
+- Added validation-first assembly of trusted passive topology IR with exactly one fixed-policy
+  voltage source and a typed, non-executable analysis request.
+- Preserved canonical plan provenance and requested frequencies while keeping assumptions inert and
+  deferring bounded analysis-directive rendering, simulator execution, and result handling to later
+  layers.
