@@ -32,3 +32,10 @@ Use a frozen standard-library `CircuitPlan` as the canonical planner output. Ver
 only RC low-pass, RC high-pass, and resistive-divider plans. Semantic validation returns stable,
 structured errors; deterministic consumers require validity through a raising helper before using
 the plan. Circuit graphs and netlists remain separate downstream representations.
+
+## ADR-008: Bounded simulation-deck expansion
+
+Expand a defensively revalidated `SimulationAssembly` into one immutable complete deck per exact AC
+frequency, or one DC operating-point deck. Reuse deterministic component rendering and permit only
+trusted generated `.ac` or `.op` directives before the single final `.end`. Simulator execution,
+paths, commands, and raw planner-authored directives remain outside this boundary.

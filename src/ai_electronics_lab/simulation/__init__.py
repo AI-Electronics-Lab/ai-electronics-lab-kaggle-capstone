@@ -6,13 +6,27 @@ from .assembly import (
     SimulationAssembly,
     build_simulation_assembly_from_plan,
 )
+from .deck import (
+    MAX_AC_RUNS,
+    SIMULATION_DECK_VERSION,
+    SimulationDeck,
+    SimulationDeckError,
+    SimulationDeckRun,
+    build_simulation_deck_from_assembly,
+)
 from .plan_adapter import CIRCUIT_PLAN_ADAPTER_VERSION, build_circuit_graph_from_plan
 
 __all__ = [
     "CIRCUIT_PLAN_ADAPTER_VERSION",
+    "MAX_AC_RUNS",
     "SIMULATION_ASSEMBLY_VERSION",
+    "SIMULATION_DECK_VERSION",
     "SimulationAnalysis",
     "SimulationAssembly",
+    "SimulationDeck",
+    "SimulationDeckError",
+    "SimulationDeckRun",
     "build_circuit_graph_from_plan",
     "build_simulation_assembly_from_plan",
+    "build_simulation_deck_from_assembly",
 ]

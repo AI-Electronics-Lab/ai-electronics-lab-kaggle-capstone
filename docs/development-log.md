@@ -63,3 +63,12 @@
 - Preserved canonical plan provenance and requested frequencies while keeping assumptions inert and
   deferring bounded analysis-directive rendering, simulator execution, and result handling to later
   layers.
+
+## Bounded simulation-deck rendering
+
+- Added defensive validation for manually constructed assemblies before executable analysis text is
+  emitted.
+- Expanded exact requested AC frequencies into bounded independent single-point decks and DC intent
+  into one operating-point deck.
+- Reused deterministic component rendering while preserving inert metadata and allowing only the
+  generated analysis directive plus the final `.end`.
