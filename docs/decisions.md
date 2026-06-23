@@ -61,3 +61,60 @@ types before hashing, indexing, comparing, formatting, encoding, resolving execu
 temporary directories, and normalizes malformed-object exceptions to `SimulationRunnerError`.
 Component numeric tokens must equal deterministic scalar rendering after parsing and bounds checks,
 so noncanonical aliases are not accepted at the PR #7 deck-text boundary.
+
+## ADR-011: Bounded ngspice raw parser boundary
+
+Parse only `SimulationExecutionEvidence` produced by the fixed runner policy into immutable
+structured voltage measurements. The parser defensively revalidates exact evidence types, version,
+run ordering, trusted probes, return codes, frequencies, and bounded raw bytes before unpacking
+native ngspice binary doubles. It accepts only the inspected ngspice-42 single-plot, single-point
+headers for RC AC analysis and divider operating-point analysis, validates every binary double for
+finiteness, validates AC frequency against the deterministic scalar-rendered request, and omits raw
+dates, stdout, stderr, paths, arbitrary vector names, and raw bytes from public parsed output.
+
+The AC frequency imaginary slot is treated according to the local ngspice-42 producer behavior:
+exact zero is accepted, and a finite subnormal placeholder from ngspice is accepted, while normal
+nonzero values are rejected. No endian detection, ASCII `Values:` parsing, heuristic recovery,
+electrical pass/fail calculation, explanation, persistence, API, UI, MCP, agent, dependency, or
+deployment behavior is part of this boundary.
+
+## ADR-012: PR #9 independent-audit remediation
+
+Keep the bounded ngspice raw parser public API, schema, error contract, bounds, and native-double
+policy unchanged, but constrain textual mode-marker detection to the ASCII header grammar. The
+parser now locates the first exact `Binary:\n` delimiter before checking for unsupported
+`Values:` mode, recognizes `Values:` only as a complete header line before binary data, and treats
+all bytes after the binary delimiter as opaque payload until bounded native-double unpacking and
+finite-value validation. Header substrings such as `Date: Values:` are not data-mode delimiters.
+
+## ADR-013: PR #9 second independent-audit remediation
+
+Keep the bounded raw-parser API, output schema, grammar, bounds, native-double behavior, and
+payload-marker remediation unchanged, but make validation order explicit at the evidence boundary.
+After validating the outer evidence container and exact run object types, the parser now validates
+every field of every run before cross-run coherence comparisons. A hostile object placed into a
+second or later `analysis_kind` with raising comparison methods is rejected at the precise
+`("runs", index, "analysis_kind")` path before equality or inequality can execute, and before any
+raw parsing begins.
+
+## ADR-014: PR #9 final independent-audit remediation
+
+Keep the bounded raw-parser public API, output schema, bounds, native-double policy, stable errors,
+payload opacity, hostile-comparison remediation, and validation-order fixes unchanged, but require
+both `Binary:` and `Values:` to be recognized only as exact complete ASCII header lines. Ordinary
+header-field substrings such as `Date: Binary:` and `Date: prefix Binary:` do not affect delimiter
+selection, variable-row substrings do not become delimiters, and binary payload remains opaque after
+the real delimiter is found.
+
+The trusted probe tuple contract remains exact: the tuple must have exactly three entries, the
+length is checked before element traversal, and length-three tuples still exact-type validate every
+entry before comparison with the trusted probe tuple.
+
+## ADR-015: PR #9 integer-overflow remediation
+
+Preserve the bounded raw-parser API, schema, grammar, exact-line delimiter handling, payload
+opacity, and validation ordering, while separating integer and floating-point frequency
+validation. Exact built-in integers are mathematically finite and are compared directly against
+the trusted positive range without conversion to a C double. Exact built-in floats continue to
+require `math.isfinite()` before range checks. This prevents huge malformed integers from escaping
+the structured parser boundary as `OverflowError`.
