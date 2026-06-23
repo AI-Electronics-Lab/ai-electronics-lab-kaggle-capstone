@@ -109,3 +109,88 @@
   `All checks passed!`; import smoke ->
   `1.0 SimulationRunnerError SimulationRunEvidence SimulationExecutionEvidence True`;
   `git diff --check` -> no output.
+
+## Bounded ngspice raw parser
+
+- Inspected `/usr/bin/ngspice` and confirmed ngspice-42. The current runner emits raw headers with `Title: * rc_low_pass` and `Title: * rc_high_pass` for AC, `Plotname: AC Analysis`, `Flags: complex`, `No. Points: 1`, and variable rows including `frequency`, `v(vin)`, `v(vout)`, and `i(v1)`; the observed AC binary payload uses native 64-bit doubles with complex slots. The inspected frequency real double matched the requested scalar exactly, while the frequency imaginary slot was a finite subnormal placeholder on this build.
+- Inspected the divider operating-point raw output and confirmed `Title: * resistive_divider`, `Plotname: Operating Point`, `Flags: real`, one point, variables `v(vin)`, `v(vout)`, and `i(v1)`, and one native 64-bit double per real vector.
+- Added the PR #9 parser-boundary specification before implementation, including trust boundary, accepted evidence, grammar, bounds, schema, canonical JSON, error contract, native double policy, AC/DC mapping, public API, and explicit exclusions.
+- Implemented `parse_simulation_execution_evidence()` with exact evidence validation, bounded ASCII header parsing, native-double payload validation, finite-value checks, trusted title/analysis mapping, required-vector extraction, immutable parsed result dataclasses, canonical JSON, and stable structured parser errors.
+- Added deterministic synthetic raw-format coverage plus optional real-ngspice plan -> assembly -> deck -> runner -> parser integration coverage for low-pass, high-pass, and divider cases.
+- Verification: `uv run pytest -q tests/simulation/test_raw_parser.py` -> `74 passed in 0.11s`.
+- Verification: `uv run pytest -q` -> `372 passed in 0.98s`.
+- Verification: `uv run ruff check .` -> `All checks passed!`.
+- Verification: package import/signature smoke -> `1.0 SimulationRawParseError SimulationComplexValue SimulationRunMeasurements SimulationParsedResults ['evidence'] SimulationParsedResults`.
+
+## PR #9 independent-audit remediation
+
+- Remediated the blocking raw-parser audit finding by locating the first exact `Binary:\n`
+  delimiter before checking for unsupported textual data mode.
+- Constrained `Values:` recognition to exact complete ASCII header lines before binary data, so
+  header substrings such as `Date: Values:` are not treated as data-mode delimiters.
+- Preserved binary payload opacity until bounded native-double unpacking; finite ignored-vector
+  payload bytes containing `Values:` or `Values:\n` are parsed only as payload values and are not
+  exposed in public measurements.
+- Added deterministic synthetic regression coverage for portable native-double `Values:` payload
+  collisions, exact-line ASCII `Values:` rejection, and `Date: Values:` binary-header acceptance.
+- Verification: `uv run pytest -q tests/simulation/test_raw_parser.py` -> `77 passed in 0.12s`.
+- Verification: `uv run pytest -q` -> `375 passed in 1.01s`.
+- Verification: `uv run ruff check .` -> `All checks passed!`.
+- Verification: package import/signature smoke -> `1.0 SimulationRawParseError
+  SimulationComplexValue SimulationRunMeasurements SimulationParsedResults ['evidence']
+  SimulationParsedResults`.
+- Verification: `git diff --check` -> no output.
+
+## PR #9 second independent-audit remediation
+
+- Remediated the remaining validation-order finding by validating all run field types before
+  comparing analysis kinds or enforcing cross-run AC/DC coherence.
+- Added deterministic two-run AC regressions for a hostile second-run `analysis_kind` whose
+  equality and inequality methods raise, and for a simple unhashable list value in the same field.
+- Verified malformed second-run `analysis_kind` values fail with `raw.evidence.malformed` at
+  `("runs", 1, "analysis_kind")`, hostile comparison methods are not invoked, and raw parsing is
+  not reached.
+- Verification: `uv run pytest -q tests/simulation/test_raw_parser.py` -> `79 passed in 0.17s`.
+- Verification: `uv run pytest -q` -> `377 passed in 0.94s`.
+- Verification: `uv run ruff check .` -> `All checks passed!`.
+- Verification: package import/signature smoke -> `1.0 SimulationRawParseError
+  SimulationComplexValue SimulationRunMeasurements SimulationParsedResults ['evidence']
+  SimulationParsedResults`.
+- Verification: `git diff --check` -> no output.
+
+## PR #9 final independent-audit remediation
+
+- Remediated the remaining delimiter-recognition finding by selecting the first exact complete
+  `Binary:` header line only when it appears at byte offset zero or immediately after `\n`, with
+  its terminating `\n`.
+- Preserved exact complete-line `Values:` rejection before the real binary delimiter, while keeping
+  ordinary header-field substrings such as `Date: Binary:` and `Date: prefix Binary:` inert for
+  delimiter selection.
+- Preserved binary payload opacity after the real delimiter; ignored-vector native-double bytes
+  containing `Binary:\n` remain payload data and are not searched as headers.
+- Hardened trusted probe validation so oversized tuples fail at `("runs", index, "probe_names")`
+  by length before element traversal, while length-three tuples still exact-type validate all
+  entries before tuple comparison.
+- Added deterministic regressions for `Date: Binary:`, `Date: prefix Binary:`, binary-payload
+  `Binary:\n`, variable-row `Binary:` substrings, missing real delimiters with `Date: Binary:`,
+  standalone `Values:` rejection, early standalone `Binary:` malformed headers, and oversized probe
+  tuples.
+- Verification: `uv run pytest -q tests/simulation/test_raw_parser.py` -> `86 passed in 0.12s`.
+- Verification: `uv run pytest -q` -> `384 passed in 0.97s`.
+- Verification: `uv run ruff check .` -> `All checks passed!`.
+- Verification: package import/signature smoke -> `1.0 SimulationRawParseError
+  SimulationComplexValue SimulationRunMeasurements SimulationParsedResults ['evidence'] True
+  SimulationParsedResults`.
+
+## PR #9 integer-overflow remediation
+
+- Separated exact built-in integer and float frequency validation.
+- Exact integer frequencies are now positivity- and range-checked without conversion to a C double.
+- Exact float frequencies continue to require finiteness before range validation.
+- Added regressions proving huge positive and negative integers and booleans fail at
+  `("runs", 0, "frequency_hz")` before raw parsing, without leaking `OverflowError`.
+- Verification: `uv run pytest -q tests/simulation/test_raw_parser.py` -> `92 passed in 0.18s`.
+- Verification: `uv run pytest -q` -> `390 passed in 0.94s`.
+- Verification: `uv run ruff check .` -> `All checks passed!`.
+- Verification: package import/signature smoke -> `1.0 SimulationRawParseError SimulationComplexValue SimulationRunMeasurements SimulationParsedResults ['evidence'] True SimulationParsedResults`.
+- Verification: `git diff --check` and untracked-file whitespace checks -> `PASS`; source compile audit -> `PASS`.
