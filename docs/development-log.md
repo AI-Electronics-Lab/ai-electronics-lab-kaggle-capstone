@@ -214,3 +214,47 @@
   authorization.
 - Remediated the initial PR #10 test-collection failure by assigning explicit stable pytest IDs to huge-integer cases, preventing Python's decimal string-conversion limit from being invoked by pytest parameter-name generation.
 - Independent audit remediation replaced the deprecated HTTPX TestClient fallback with HTTPX2, narrowed FastAPI and Uvicorn to the tested minor release lines, and added wheel package-data plus live localhost verification evidence.
+
+## PR #11 deterministic evidence verifier — specification checkpoint
+
+- Created feat/deterministic-evidence-verifier from clean merged-main commit
+  837ab6505480df1653aa23d0c77610431a9476fb.
+- Confirmed the PR #10 UI process was stopped before starting the next milestone.
+- Defined the verifier trust boundary, exact public API, input coherence rules, analytical RC
+  and divider formulas, fixed tolerance policy, immutable schema, stable errors, web mapping,
+  safe UI panel, acceptance tests, implementation boundaries, and explicit exclusions.
+- Selected fixed comparison constants: absolute tolerance 1e-9, relative tolerance 1e-6,
+  warning multiplier 10.0, and denominator floor 1e-12.
+- Required scale-aware complex division, exact-type validation before arithmetic, deterministic
+  JSON, and omission of raw or process evidence.
+- No implementation source file, dependency, staging operation, commit, push, or pull request
+  was created in this specification checkpoint.
+
+
+## PR #11 deterministic evidence verifier — uncommitted implementation checkpoint
+
+- Verified and preserved the existing branch, merge-base, decision record, development-log, and
+  verifier-specification checkpoint before implementation.
+- Added the public `ai_electronics_lab.verification` package with immutable result contracts,
+  stable errors, exact-type hostile-boundary validation, fixed PASS/WARN/FAIL policy, analytical
+  RC and divider models, scale-aware complex division, and canonical deterministic JSON.
+- Extended the established pipeline after bounded raw parsing and before safe response generation.
+- Added safe HTTP error mapping and deterministic verification fields without exposing raw or
+  process evidence.
+- Added a self-contained verification panel using DOM creation and `textContent`, plus core, web,
+  hostile-input, serialization, browser-safety, and approved real-ngspice tests.
+- Kept dependencies unchanged. Validation outputs are recorded in the timestamped PR #11 audit
+  bundle. All implementation changes remain unstaged and uncommitted.
+
+## PR #11 independent audit — remediation checkpoint
+
+- Verified the uploaded audit ZIP against SHA-256
+  `822fd7ed09610d18ea7bfd656340e2c72b878a18a4c1f81d6d33a74f90053dc3`.
+- Reproduced a release-blocking trust-boundary defect: a `MappingProxyType` backed by a hostile
+  mapping executed its custom iterator and escaped as `RuntimeError`.
+- Reproduced public comparison-contract gaps that accepted an unknown metric, negative errors,
+  zero limits, and incoherent status/reason combinations.
+- Added exact backing-dict inspection without mapping-hook execution, strengthened comparison
+  invariants, and added focused regression tests.
+- The remediation remains unstaged and uncommitted pending server-side full-suite, Ruff,
+  compilation, ngspice, wheel, and audit verification.

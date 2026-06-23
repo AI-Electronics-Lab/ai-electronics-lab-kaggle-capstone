@@ -134,3 +134,37 @@ return raw evidence, child output, temporary paths, environment values, or excep
 
 Add only bounded FastAPI and Uvicorn runtime ranges and test-only HTTPX. Keep the implementation
 unstaged and uncommitted until independent audit.
+
+## ADR-017: Deterministic analytical evidence verification
+
+Add an immutable deterministic verifier after bounded raw parsing and before any future
+explanation layer. The verifier accepts only a validated CircuitPlan and coherent
+SimulationParsedResults, revalidates exact types and cross-object structure, calculates frozen
+analytical expectations for the three supported topologies, and emits bounded PASS, WARN, or
+FAIL evidence.
+
+Use fixed non-user-configurable tolerances: absolute 1e-9, relative 1e-6, warning multiplier
+10.0, and denominator floor 1e-12. Compare complex values using magnitude error, use a
+scale-aware complex-division algorithm, report phase only above the denominator floor, preserve
+deterministic canonical JSON, and normalize malformed or non-finite inputs to stable structured
+verifier errors.
+
+Integrate verification into the existing localhost API and self-contained UI without adding a
+dependency, LLM, prose explanation, persistence, arbitrary SPICE, user-defined tolerances, or
+new deployment surface.
+
+## ADR-018: PR #11 independent-audit trust-boundary remediation
+
+Preserve the deterministic verifier API, analytical models, fixed tolerances, comparison order,
+web response, and UI behavior while closing two public-contract gaps found during independent
+audit.
+
+Before traversing `CircuitPlan.parameters`, inspect the exact `MappingProxyType` referent without
+invoking mapping protocol hooks and require the referent itself to be an exact built-in `dict`.
+This prevents a mapping proxy over a hostile custom mapping from executing user-defined iteration
+or lookup code at the verifier boundary.
+
+Also enforce the documented `VerificationComparison` schema at construction: metric allowlist,
+nonnegative errors, positive fixed-policy limits, value/error coherence, and status/reason
+classification coherence. These checks harden the public immutable evidence contract without
+changing normal verifier output.
