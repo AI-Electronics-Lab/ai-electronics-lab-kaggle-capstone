@@ -72,3 +72,40 @@
   into one operating-point deck.
 - Reused deterministic component rendering while preserving inert metadata and allowing only the
   generated analysis directive plus the final `.end`.
+
+## Bounded ngspice runner
+
+- Added the PR #8 specification for the deck-to-ngspice trust boundary, fixed execution policy,
+  immutable evidence schema, byte/time bounds, cleanup behavior, and stable failure codes.
+- Implemented `run_simulation_deck()` with defensive deck/netlist revalidation before executable
+  resolution, fixed trusted ngspice candidates, fixed `-n -b -r output.raw input.cir` argv, isolated
+  temporary working directories, minimal environment, bounded stdout/stderr/raw capture, and
+  process-group termination.
+- Added deterministic fake-executable coverage for success, failure, overflow, timeout, cleanup,
+  validation-before-resolution, and public API constraints.
+- Verification: `uv run pytest -q tests/simulation/test_runner.py` -> `32 passed in 0.40s`; `uv run pytest -q` -> `285 passed in 0.56s`; `uv run ruff check .` -> `All checks passed!`; import smoke -> `1.0 SimulationRunnerError SimulationRunEvidence SimulationExecutionEvidence True`.
+- Local ngspice inspection: `/usr/bin/ngspice` exists and reports ngspice-42; `--help` confirms
+  `-n` disables local/user config loading, `-b` batch mode, and `-r` rawfile output.
+
+
+## PR #8 independent-audit remediation
+
+- Reproduced the independent-audit concerns from the current runner implementation and kept changes
+  confined to the PR #8 allowlisted files.
+- Hardened process cleanup so descendant processes are terminated even when the process leader has
+  already exited or been reaped, including before accepting successful output or reporting stable
+  nonzero/raw-output failures.
+- Added defensive exact-type validation and malformed-object exception normalization before
+  executable resolution or temporary-directory creation.
+- Required component numeric tokens to match deterministic scalar rendering after parse and bounds
+  checks, rejecting noncanonical aliases such as `1_000`, `+1000`, `01000`, and `1e3`.
+- Normalized process stream/selector/wait I/O failures to `runner.io.failed` without exposing
+  underlying exception text or child output.
+- Added deterministic fake-executable regression coverage for escaped descendants after both zero
+  and nonzero leader exits, corrupted dataclass fields via `object.__setattr__`, noncanonical
+  numeric aliases, and selector `OSError` cleanup.
+- Verification: `uv run pytest -q tests/simulation/test_runner.py` -> `45 passed in 0.70s`;
+  `uv run pytest -q` -> `298 passed in 0.84s`; `uv run ruff check .` ->
+  `All checks passed!`; import smoke ->
+  `1.0 SimulationRunnerError SimulationRunEvidence SimulationExecutionEvidence True`;
+  `git diff --check` -> no output.

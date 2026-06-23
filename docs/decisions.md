@@ -39,3 +39,25 @@ Expand a defensively revalidated `SimulationAssembly` into one immutable complet
 frequency, or one DC operating-point deck. Reuse deterministic component rendering and permit only
 trusted generated `.ac` or `.op` directives before the single final `.end`. Simulator execution,
 paths, commands, and raw planner-authored directives remain outside this boundary.
+
+## ADR-009: Bounded ngspice execution boundary
+
+Execute `SimulationDeck` values only through a private fixed ngspice policy. The runner
+defensively revalidates deck structure and rendered netlist text before executable lookup, uses
+trusted absolute candidates only, suppresses ngspice startup files with `-n`, runs batch mode with
+fixed internal input and raw-output filenames, provides a minimal non-inherited environment, bounds
+input/stdout/stderr/raw bytes and per-run/total time, terminates the process group on failure, and
+returns immutable raw evidence only after every run succeeds. Version 1.0 evidence excludes elapsed
+time because wall-clock timing is nondeterministic and unnecessary for the future electrical parser.
+
+
+## ADR-010: PR #8 independent-audit remediation
+
+Keep the fixed ngspice execution policy, but harden its validation and cleanup semantics. The
+runner now treats process-leader exit as insufficient evidence that the process group is empty,
+signals the complete child process group after both normal stream drain and failure paths, and
+reaps the direct child deterministically. It validates exact deck/run/string/tuple/numeric field
+types before hashing, indexing, comparing, formatting, encoding, resolving executables, or creating
+temporary directories, and normalizes malformed-object exceptions to `SimulationRunnerError`.
+Component numeric tokens must equal deterministic scalar rendering after parsing and bounds checks,
+so noncanonical aliases are not accepted at the PR #7 deck-text boundary.
