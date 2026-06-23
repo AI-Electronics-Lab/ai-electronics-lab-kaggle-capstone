@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from ai_electronics_lab.simulation import (
     SimulationRunMeasurements,
     SimulationRunnerError,
 )
+from ai_electronics_lab.verification import SimulationVerificationError
 from ai_electronics_lab.web import (
     MAX_REQUEST_BODY_BYTES,
     WebUIError,
@@ -53,28 +55,32 @@ def _valid_divider() -> dict[str, object]:
 def _fake_parsed_results(
     deck: Any,
     topology: str,
+    payload: dict[str, object],
 ) -> SimulationParsedResults:
     runs = []
 
     for run in deck.runs:
         if run.analysis_kind == "dc":
-            vin = SimulationComplexValue(
-                real=5.0,
-                imag=0.0,
-            )
-            vout = SimulationComplexValue(
-                real=10.0 / 3.0,
-                imag=0.0,
-            )
+            input_voltage = float(payload["input_voltage_volts"])
+            resistance_top = float(payload["resistance_top_ohms"])
+            resistance_bottom = float(payload["resistance_bottom_ohms"])
+            ratio = resistance_bottom / (resistance_top + resistance_bottom)
+            vin = SimulationComplexValue(real=input_voltage, imag=0.0)
+            vout = SimulationComplexValue(real=input_voltage * ratio, imag=0.0)
         else:
-            vin = SimulationComplexValue(
-                real=1.0,
-                imag=0.0,
-            )
-            vout = SimulationComplexValue(
-                real=0.5,
-                imag=-0.25,
-            )
+            frequency = float(run.frequency_hz)
+            resistance = float(payload["resistance_ohms"])
+            capacitance = float(payload["capacitance_farads"])
+            x = 2.0 * math.pi * frequency * resistance * capacitance
+            denominator = 1.0 + x * x
+            if topology == "rc_low_pass":
+                real = 1.0 / denominator
+                imag = -x / denominator
+            else:
+                real = x * x / denominator
+                imag = x / denominator
+            vin = SimulationComplexValue(real=1.0, imag=0.0)
+            vout = SimulationComplexValue(real=real, imag=imag)
 
         runs.append(
             SimulationRunMeasurements(
@@ -108,6 +114,7 @@ def _simulate_without_ngspice(
         return _fake_parsed_results(
             captured["deck"],
             str(payload["topology"]),
+            payload,
         )
 
     return simulate_request(
@@ -142,6 +149,14 @@ def test_home_page_is_self_contained_and_hardened() -> None:
     assert "<script src=" not in response.text
     assert "<link rel=" not in response.text
     assert "https://" not in response.text
+    assert "Deterministic analytical verification" in response.text
+    assert 'id="verification-panel"' in response.text
+    assert 'id="verification-summary"' in response.text
+    assert 'id="verification-runs"' in response.text
+    assert "renderVerification" in response.text
+    assert ".textContent" in response.text
+    assert '].join("\\n");' in response.text
+    assert '].join("\n");' not in response.text
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["cache-control"] == "no-store"
@@ -182,10 +197,10 @@ def test_valid_rc_request_reaches_safe_parsed_results(
         ".ac lin 1 10 10"
         in result["deck"]["runs"][0]["netlist_text"]
     )
-    assert result["results"]["runs"][0]["vout_voltage"] == {
-        "imag": -0.25,
-        "real": 0.5,
-    }
+    assert set(result["results"]["runs"][0]["vout_voltage"]) == {"imag", "real"}
+    assert result["verification_kind"] == "deterministic_analytical_verification"
+    assert result["verification"]["status"] == "PASS"
+    assert result["verification"]["runs"][0]["status"] == "PASS"
     assert result["schematic_svg"].startswith("<svg")
 
 
@@ -199,6 +214,8 @@ def test_valid_divider_request_reaches_safe_parsed_results() -> None:
     assert result["deck"]["runs"][0]["run_id"] == "dc-op"
     assert ".op" in result["deck"]["runs"][0]["netlist_text"]
     assert result["results"]["runs"][0]["frequency_hz"] is None
+    assert result["verification"]["status"] == "PASS"
+    assert result["verification"]["runs"][0]["comparisons"][1]["metric"] == "divider_ratio"
     assert result["schematic_svg"].startswith("<svg")
 
 
@@ -478,6 +495,60 @@ def test_parser_error_is_mapped_without_internal_text() -> None:
     assert captured.value.path == ()
 
 
+def test_verifier_error_is_mapped_without_internal_text() -> None:
+    secret = "SECRET verifier path /tmp/private"
+
+    def verifier(_plan: object, _parsed: object) -> object:
+        raise SimulationVerificationError(
+            "verification.results.mismatch",
+            ("runs", 0),
+            secret,
+        )
+
+    captured: dict[str, Any] = {}
+
+    def real_runner(deck: Any) -> object:
+        captured["deck"] = deck
+        return object()
+
+    def real_parser(_evidence: object) -> SimulationParsedResults:
+        return _fake_parsed_results(
+            captured["deck"],
+            "rc_low_pass",
+            _valid_rc(),
+        )
+
+    with pytest.raises(WebUIError) as error:
+        simulate_request(
+            _valid_rc(),
+            runner=real_runner,
+            parser=real_parser,
+            verifier=verifier,  # type: ignore[arg-type]
+        )
+
+    assert error.value.status_code == 502
+    assert error.value.code == "simulation.verification_invalid"
+    assert error.value.path == ()
+    assert error.value.message == "The deterministic simulation evidence could not be verified."
+    assert secret not in error.value.message
+
+
+def test_success_response_contains_only_safe_verification_values() -> None:
+    result = _simulate_without_ngspice(_valid_divider())
+    verification = result["verification"]
+    assert verification["version"] == "1.0"
+    assert verification["status"] == "PASS"
+    assert verification["tolerance_policy"] == {
+        "absolute_tolerance": 1e-9,
+        "denominator_floor": 1e-12,
+        "relative_tolerance": 1e-6,
+        "warning_multiplier": 10.0,
+    }
+    assert verification["runs"][0]["reason_codes"] == [
+        "verification.within_tolerance"
+    ]
+
+
 def test_unexpected_exception_response_does_not_disclose_exception() -> None:
     secret = "SECRET_TOKEN=/tmp/private/path"
 
@@ -522,18 +593,33 @@ def test_success_response_omits_raw_and_process_evidence() -> None:
     not _NGSPICE_AVAILABLE,
     reason="approved local ngspice executable is unavailable",
 )
-def test_optional_real_ngspice_pipeline_smoke() -> None:
-    payload = _valid_rc()
-    payload["frequencies_hz"] = [1000]
-
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {
+            "topology": "rc_low_pass",
+            "resistance_ohms": 1000,
+            "capacitance_farads": 1e-6,
+            "frequencies_hz": [1000],
+        },
+        {
+            "topology": "rc_high_pass",
+            "resistance_ohms": 1000,
+            "capacitance_farads": 1e-6,
+            "frequencies_hz": [1000],
+        },
+        {
+            "topology": "resistive_divider",
+            "input_voltage_volts": 5,
+            "resistance_top_ohms": 1000,
+            "resistance_bottom_ohms": 2000,
+        },
+    ],
+    ids=["low-pass", "high-pass", "divider"],
+)
+def test_optional_real_ngspice_pipeline_smoke(payload: dict[str, object]) -> None:
     result = simulate_request(payload)
 
     assert result["status"] == "ok"
-    assert (
-        result["results"]["runs"][0]["run_id"]
-        == "ac-01"
-    )
-    assert (
-        result["results"]["runs"][0]["frequency_hz"]
-        == 1000
-    )
+    assert result["verification"]["status"] == "PASS"
+    assert all(run["status"] == "PASS" for run in result["verification"]["runs"])

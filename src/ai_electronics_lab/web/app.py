@@ -44,6 +44,11 @@ from ai_electronics_lab.simulation import (
 from ai_electronics_lab.simulation.core.schematic_renderer import (
     render_engineering_schematic_svg,
 )
+from ai_electronics_lab.verification import (
+    SimulationVerificationError,
+    SimulationVerificationResults,
+    verify_simulation_results,
+)
 
 MAX_REQUEST_BODY_BYTES = 8 * 1024
 MAX_UI_FREQUENCIES = 8
@@ -55,6 +60,7 @@ _INDEX_PATH = Path(__file__).with_name("index.html")
 SimulationService = Callable[[object], dict[str, Any]]
 Runner = Callable[[SimulationDeck], Any]
 Parser = Callable[[Any], SimulationParsedResults]
+Verifier = Callable[[CircuitPlan, SimulationParsedResults], SimulationVerificationResults]
 
 _SECURITY_HEADERS = {
     "Cache-Control": "no-store",
@@ -103,6 +109,7 @@ def simulate_request(
     *,
     runner: Runner = run_simulation_deck,
     parser: Parser = parse_simulation_execution_evidence,
+    verifier: Verifier = verify_simulation_results,
 ) -> dict[str, Any]:
     """Validate one narrow UI request and execute the trusted pipeline."""
 
@@ -123,14 +130,28 @@ def simulate_request(
                 500,
             )
 
+        verification = verifier(validated_plan, parsed)
+        if type(verification) is not SimulationVerificationResults:
+            raise WebUIError(
+                "simulation.internal_error",
+                (),
+                "The simulation pipeline returned an unexpected verification result.",
+                500,
+            )
+
         return {
             "deck": _safe_deck_dict(deck),
             "evidence_kind": "deterministic_simulation_evidence",
-            "notice": "Deterministic ngspice evidence; not an LLM assertion.",
+            "notice": (
+                "Deterministic ngspice evidence with analytical verification; "
+                "not an LLM assertion."
+            ),
             "plan": validated_plan.to_dict(),
             "results": _safe_results_dict(parsed),
             "schematic_svg": schematic_svg,
             "status": "ok",
+            "verification": verification.to_dict(),
+            "verification_kind": "deterministic_analytical_verification",
         }
     except WebUIError:
         raise
@@ -161,6 +182,13 @@ def simulate_request(
             "simulation.evidence_invalid",
             (),
             "The bounded simulation evidence could not be parsed.",
+            502,
+        ) from None
+    except SimulationVerificationError:
+        raise WebUIError(
+            "simulation.verification_invalid",
+            (),
+            "The deterministic simulation evidence could not be verified.",
             502,
         ) from None
     except (ArithmeticError, AssertionError, TypeError, ValueError):

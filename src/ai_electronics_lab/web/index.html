@@ -294,6 +294,31 @@
       background: #fff;
     }
 
+    .verification-summary {
+      display: grid;
+      gap: 6px;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border-bottom: 1px solid #dbe3ee;
+    }
+
+    .verification-summary p,
+    .verification-run-meta {
+      margin: 0;
+      color: #42536a;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .verification-summary strong {
+      color: #18283d;
+    }
+
+    .verification-complex {
+      white-space: pre-line;
+      line-height: 1.45;
+    }
+
     .table-wrap {
       overflow-x: auto;
     }
@@ -487,8 +512,8 @@
           </form>
 
           <p class="notice">
-            Results are deterministic simulation evidence. This milestone does not produce
-            an electrical PASS/WARN/FAIL verdict and does not make an LLM assertion.
+            Results are deterministic ngspice evidence with fixed analytical PASS/WARN/FAIL
+            verification. No LLM assertion participates in the verdict.
           </p>
         </div>
       </section>
@@ -546,6 +571,15 @@
                 </table>
               </div>
             </section>
+
+            <section id="verification-panel" class="panel">
+              <h3>Deterministic analytical verification</h3>
+              <div id="verification-summary" class="verification-summary">
+                <p id="verification-overall"></p>
+                <p id="verification-policy"></p>
+              </div>
+              <div id="verification-runs"></div>
+            </section>
           </div>
 
           <div
@@ -577,6 +611,9 @@
     const planOutput = document.getElementById("plan-output");
     const deckOutput = document.getElementById("deck-output");
     const resultsBody = document.getElementById("results-body");
+    const verificationOverall = document.getElementById("verification-overall");
+    const verificationPolicy = document.getElementById("verification-policy");
+    const verificationRuns = document.getElementById("verification-runs");
     const schematicImage = document.getElementById("schematic-image");
 
     let schematicUrl = null;
@@ -690,6 +727,9 @@
 
       deckOutput.replaceChildren();
       resultsBody.replaceChildren();
+      verificationRuns.replaceChildren();
+      verificationOverall.textContent = "";
+      verificationPolicy.textContent = "";
       planOutput.textContent = "";
       schematicImage.removeAttribute("src");
     }
@@ -710,10 +750,35 @@
       return Number(value).toPrecision(8);
     }
 
-    function appendCell(row, value) {
+    function appendCell(row, value, className = "") {
       const cell = document.createElement("td");
       cell.textContent = String(value);
+      if (className !== "") {
+        cell.className = className;
+      }
       row.appendChild(cell);
+    }
+
+    function formatNumber(value) {
+      if (value === null) {
+        return "—";
+      }
+      return Number(value).toPrecision(8);
+    }
+
+    function formatComplex(value) {
+      if (value === null) {
+        return "unavailable";
+      }
+      const phase = value.phase_degrees === null
+        ? "not meaningful"
+        : `${formatNumber(value.phase_degrees)}°`;
+      return [
+        `real=${formatNumber(value.real)}`,
+        `imag=${formatNumber(value.imag)}`,
+        `magnitude=${formatNumber(value.magnitude)}`,
+        `phase=${phase}`
+      ].join("\n");
     }
 
     function renderDeck(deck) {
@@ -748,6 +813,78 @@
       }
     }
 
+    function renderVerification(verification) {
+      verificationRuns.replaceChildren();
+      verificationOverall.textContent = `Overall status: ${verification.status}`;
+
+      const policy = verification.tolerance_policy;
+      verificationPolicy.textContent = [
+        `absolute=${formatNumber(policy.absolute_tolerance)}`,
+        `relative=${formatNumber(policy.relative_tolerance)}`,
+        `warning multiplier=${formatNumber(policy.warning_multiplier)}`,
+        `denominator floor=${formatNumber(policy.denominator_floor)}`
+      ].join(" · ");
+
+      for (const run of verification.runs) {
+        const details = document.createElement("details");
+        const summary = document.createElement("summary");
+        const meta = document.createElement("p");
+        const tableWrap = document.createElement("div");
+        const table = document.createElement("table");
+        const head = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        const body = document.createElement("tbody");
+
+        summary.textContent = `${run.run_id} · ${run.status}`;
+        meta.className = "verification-run-meta";
+        meta.textContent = [
+          `topology=${run.topology}`,
+          `analysis=${run.analysis_kind}`,
+          `frequency=${formatValue(run.frequency_hz)}`,
+          `cutoff=${formatNumber(run.cutoff_frequency_hz)}`,
+          `reasons=${run.reason_codes.join(", ")}`
+        ].join(" · ");
+        meta.style.padding = "0 14px 12px";
+
+        for (const label of [
+          "Metric",
+          "Status",
+          "Reason",
+          "Expected",
+          "Measured",
+          "Absolute error",
+          "Relative error",
+          "PASS limit",
+          "WARN limit"
+        ]) {
+          const heading = document.createElement("th");
+          heading.textContent = label;
+          headRow.appendChild(heading);
+        }
+
+        for (const comparison of run.comparisons) {
+          const row = document.createElement("tr");
+          appendCell(row, comparison.metric);
+          appendCell(row, comparison.status);
+          appendCell(row, comparison.reason_code);
+          appendCell(row, formatComplex(comparison.expected), "verification-complex");
+          appendCell(row, formatComplex(comparison.measured), "verification-complex");
+          appendCell(row, formatNumber(comparison.absolute_error));
+          appendCell(row, formatNumber(comparison.relative_error));
+          appendCell(row, formatNumber(comparison.pass_limit));
+          appendCell(row, formatNumber(comparison.warning_limit));
+          body.appendChild(row);
+        }
+
+        head.appendChild(headRow);
+        table.append(head, body);
+        tableWrap.className = "table-wrap";
+        tableWrap.appendChild(table);
+        details.append(summary, meta, tableWrap);
+        verificationRuns.appendChild(details);
+      }
+    }
+
     function renderSuccess(payload) {
       clearRenderedOutput();
       errorOutput.classList.add("hidden");
@@ -758,6 +895,7 @@
       planOutput.textContent = JSON.stringify(payload.plan, null, 2);
       renderDeck(payload.deck);
       renderResults(payload.results);
+      renderVerification(payload.verification);
 
       const svgBlob = new Blob(
         [payload.schematic_svg],
