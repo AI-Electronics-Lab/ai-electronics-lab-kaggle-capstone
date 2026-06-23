@@ -194,3 +194,23 @@
 - Verification: `uv run ruff check .` -> `All checks passed!`.
 - Verification: package import/signature smoke -> `1.0 SimulationRawParseError SimulationComplexValue SimulationRunMeasurements SimulationParsedResults ['evidence'] True SimulationParsedResults`.
 - Verification: `git diff --check` and untracked-file whitespace checks -> `PASS`; source compile audit -> `PASS`.
+
+## PR #10 minimal localhost UI — uncommitted implementation checkpoint
+
+- Started feat/minimal-local-web-ui from merged PR #9 commit
+  f30972a80ff22fc2457b232a450ecf6ceff6cca7.
+- Wrote the UI specification before implementation.
+- Selected exact structured fields rather than inventing a natural-language parser.
+- Added one self-contained local page, one bounded JSON route, a thin deterministic
+  orchestration service, safe stable error mapping, restricted browser headers, and a
+  one-request execution limit.
+- Reused CircuitPlan, simulation assembly, bounded deck generation, bounded ngspice execution,
+  bounded raw parsing, and the existing engineering SVG renderer.
+- Added focused route, service, security, output-disclosure, malformed-input, fake-pipeline, and
+  optional real-ngspice tests.
+- Added only bounded FastAPI and Uvicorn runtime dependencies and test-only HTTPX.
+- No coding-agent CLI was invoked by this guarded edit block.
+- This checkpoint must remain unstaged and uncommitted until independent audit and
+  authorization.
+- Remediated the initial PR #10 test-collection failure by assigning explicit stable pytest IDs to huge-integer cases, preventing Python's decimal string-conversion limit from being invoked by pytest parameter-name generation.
+- Independent audit remediation replaced the deprecated HTTPX TestClient fallback with HTTPX2, narrowed FastAPI and Uvicorn to the tested minor release lines, and added wheel package-data plus live localhost verification evidence.

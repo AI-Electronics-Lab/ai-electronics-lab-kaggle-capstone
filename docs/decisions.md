@@ -118,3 +118,19 @@ validation. Exact built-in integers are mathematically finite and are compared d
 the trusted positive range without conversion to a C double. Exact built-in floats continue to
 require `math.isfinite()` before range checks. This prevents huge malformed integers from escaping
 the structured parser boundary as `OverflowError`.
+
+## ADR-016: Minimal localhost FastAPI UI boundary
+
+Expose the existing deterministic plan-to-parser pipeline through one localhost-only FastAPI
+application. The HTTP boundary accepts exact topology-specific JSON fields rather than
+attempting natural-language planning. Route handlers perform bounded decoding and delegate to a
+separate orchestration function; they do not reproduce topology, deck, runner, or parser logic.
+
+Use a self-contained page with no external assets, disabled generated API documentation, safe
+text-node rendering, Blob-backed schematic images, stable generic execution errors, a
+one-request concurrency boundary, and an explicit 127.0.0.1:18800 startup command. Return
+validated plans, trusted deck text, deterministic schematic SVG, and parsed voltages, but never
+return raw evidence, child output, temporary paths, environment values, or exception strings.
+
+Add only bounded FastAPI and Uvicorn runtime ranges and test-only HTTPX. Keep the implementation
+unstaged and uncommitted until independent audit.
