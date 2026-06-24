@@ -104,6 +104,9 @@ bash scripts/verify.sh
 This synchronizes the development environment, runs Ruff, runs the full pytest suite, and performs
 a package-import smoke test.
 
+The deterministic test distribution, representative evaluation cases, verdict-policy evidence, and
+limitations are recorded in [`docs/evaluation.md`](docs/evaluation.md).
+
 ## Current competition-alignment status
 
 - Agent Skill: included at `.agents/skills/verified-circuit-simulation/SKILL.md`; it guides
