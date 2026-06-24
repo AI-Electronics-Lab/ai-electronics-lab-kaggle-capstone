@@ -360,3 +360,19 @@
   recorded.
 - Confirmed the useful product workflow is complete and frozen. No additional product features
   are required for the remaining competition-alignment work.
+
+## Phase 1 public-scope alignment
+
+- Rewrote the README around the finished three-topology natural-language-to-verdict workflow.
+- Documented the actual deterministic trust boundary, Linux prerequisites, locked `uv` setup,
+  ngspice requirement, safe OpenRouter configuration, localhost startup command, verification
+  command, supported example prompts, and exact limitations.
+- Removed public requirements and scenarios for plots, downloadable bundles, comparison runs,
+  parent/child history, explanations, persistence, memory, MCP, cloud deployment, unsupported
+  topologies, and offline natural-language planning.
+- Replaced the architecture description with the implemented planner-to-structured-evidence flow
+  and reserved future Skill and ADK work for thin adapters around the existing core.
+- Reduced `.env.example` to the active bounded OpenRouter planner settings.
+- Updated the submission-evidence checklist to require only reproducible finished-scope and later
+  alignment evidence.
+- Added ADR-022 to freeze the product scope. No runtime source, dependency, or behavior changed.

@@ -1,45 +1,56 @@
 # Acceptance scenarios
 
-## RC low-pass design
+## RC low-pass
 
-**Given** offline mode and ngspice are available
-**When** the user requests a 1 kHz RC low-pass filter
-**Then** the system selects the low-pass topology, derives valid component values,
-builds the netlist deterministically, runs ngspice, and reports verified checkpoints.
+**Given** a configured OpenRouter planner and local ngspice
+**When** the user requests a supported RC low-pass circuit with valid component values and
+frequencies
+**Then** the system returns HTTP 200, a validated `rc_low_pass` plan, parsed measurements, a
+schematic, a completed safe trace, and a deterministic verdict.
 
-## Explicit RC values
+## RC high-pass
 
-**Given** R = 1.6 kΩ and C = 100 nF
-**When** the user requests a low-pass simulation
-**Then** the calculated cutoff is approximately 995 Hz and the evidence records the
-actual values used.
+**Given** a configured OpenRouter planner and local ngspice
+**When** the user requests a supported RC high-pass circuit with valid component values and
+frequencies
+**Then** the system returns HTTP 200, a validated `rc_high_pass` plan, parsed measurements, a
+schematic, a completed safe trace, and a deterministic verdict.
 
-## High-pass design
+## Resistive divider
 
-**When** the user requests a 1 kHz RC high-pass filter
-**Then** low frequencies are attenuated, the cutoff is near −3 dB, and high frequencies
-approach unity gain.
-
-## Voltage divider
-
-**Given** R1 = 10 kΩ and R2 = 10 kΩ
-**When** the user requests a voltage divider
-**Then** the verified unloaded output ratio is approximately 0.5.
-
-## What-if comparison
-
-**Given** a completed RC-filter run
-**When** the resistor is doubled
-**Then** a child run is created and the new cutoff is compared with the parent run.
+**Given** a configured OpenRouter planner and local ngspice
+**When** the user requests an unloaded resistive divider with valid input voltage and resistor
+values
+**Then** the system returns HTTP 200, a validated `resistive_divider` plan, parsed DC measurements,
+a schematic, a completed safe trace, and a deterministic verdict.
 
 ## Unsupported request
 
-**When** the user requests an unsupported power-electronics design
-**Then** the system returns FAIL without generating fabricated simulation evidence.
+**When** the user requests an unsupported topology or asks the model to supply arbitrary SPICE,
+commands, paths, tools, or evidence
+**Then** the request fails safely without fabricated simulation results or expanded model authority.
 
 ## Missing ngspice
 
-**Given** ngspice is unavailable
-**When** a live simulation is requested
-**Then** the system reports the missing dependency clearly and does not claim that a
-simulation completed.
+**Given** no trusted ngspice executable is available
+**When** a simulation reaches the execution boundary
+**Then** the system returns a stable execution failure and does not claim that simulation or
+verification completed.
+
+## Provider or configuration failure
+
+**Given** the OpenRouter API key is absent, configuration is invalid, or the provider is unavailable
+**When** a natural-language request is submitted
+**Then** the system returns a stable planner failure without exposing the key, provider body, or
+internal exception details.
+
+## Hostile or malformed input
+
+**When** an HTTP request contains malformed JSON, duplicate keys, non-finite values, unexpected
+fields, invalid UTF-8, unsupported compression, control characters, or an oversized prompt
+**Then** the bounded HTTP and orchestration layers reject it before unsafe downstream processing.
+
+## Deferred scenarios
+
+Plots, downloadable artifact bundles, prose explanations, what-if comparison, parent/child runs,
+persistence, memory, MCP, and cloud deployment are outside the finished product scope.

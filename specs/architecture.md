@@ -1,47 +1,60 @@
 # Architecture
 
-    Browser
-      |
-    FastAPI application
-      |
-    Bounded agent workflow
-      |
-    Structured CircuitPlan
-      |
-    Deterministic validator
-      |
-    Deterministic netlist builder
-      |
-    Bounded local ngspice subprocess
-      |
-    Result parser and analytical checks
-      |
-    Evidence verifier
-      |
-    Verified explanation and artifacts
+## Truthful core flow
 
-## Shared electronics core
+```text
+bounded OpenRouter planner
+→ CircuitPlan validation
+→ simulation assembly
+→ trusted SPICE deck
+→ bounded local ngspice
+→ bounded raw parser
+→ deterministic analytical verifier
+→ structured evidence
+```
 
-The same deterministic modules will serve:
+The localhost FastAPI application and browser UI are thin interfaces around this core.
 
-- the local web application;
-- the ADK workflow;
-- the MCP server;
-- the CLI and evaluation runner.
+## Planner boundary
 
-Business logic must not be duplicated between interfaces.
+The provider extracts bounded topology and numeric intent only. Provider output is untrusted until
+local deterministic code constructs and validates the canonical `CircuitPlan`.
 
-## Persistence
+The provider cannot define trusted circuit connectivity, netlists, commands, paths, simulation
+evidence, verification evidence, or verdicts. One initial provider call and at most one bounded
+repair attempt are permitted.
 
-Use SQLite or local JSON under `./data`. Production PostgreSQL is outside scope.
+## Deterministic core
 
-## Agent workflow
+After `CircuitPlan` validation, deterministic modules:
 
-Planner → validation → simulation → verification → explanation.
+1. assemble the supported circuit;
+2. render the trusted SPICE deck;
+3. execute ngspice through a fixed subprocess policy;
+4. parse bounded raw evidence;
+5. compare measurements with frozen analytical models;
+6. produce structured evidence and `PASS`, `WARN`, or `FAIL`.
 
-At most one bounded repair attempt is permitted in the initial implementation.
+The browser may display the trusted deck, schematic, measurements, verification data, and safe stage
+trace. Raw provider bodies, raw subprocess evidence, credentials, environment values, and temporary
+paths are not public response fields.
 
-## Security boundary
+## Current interface
 
-The LLM may propose structured data only. It may not provide arbitrary subprocess
-arguments, filesystem paths, or executable netlist text.
+The current supported interface is one localhost-only FastAPI application with a self-contained
+browser page and bounded JSON routes. The service is intentionally bound to `127.0.0.1`.
+
+## Future alignment adapters
+
+A repository Agent Skill and a Google ADK adapter may be added as thin competition-alignment layers.
+They must guide or call the existing orchestration entry point and must not duplicate or replace the
+deterministic electronics core.
+
+No MCP server, persistence layer, memory service, cloud deployment, or general-purpose CLI is part of
+the finished runtime architecture.
+
+## Reproducibility
+
+The Python environment is locked with `uv.lock`. `scripts/verify.sh` performs the CI-equivalent
+development verification. Live natural-language execution additionally requires OpenRouter access
+and a trusted local ngspice installation.
