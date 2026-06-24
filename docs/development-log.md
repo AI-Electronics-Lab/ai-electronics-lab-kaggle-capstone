@@ -334,3 +334,29 @@
   JSON object without including the first provider response or hostile provider-controlled paths.
 - Corrected the contradictory regression test and development-log statement while preserving the
   closed safe-error vocabulary and one-repair limit.
+
+## Phase 0 capstone baseline audit and scope freeze
+
+- Audited the public GitHub repository and synchronized local `main` with GitHub at commit
+  `318ee54b1e1cbf28d25db01901633ac08e090517`.
+- Confirmed there were no open pull requests and the local working tree was clean before
+  verification.
+- Verified the locked development environment with `uv sync --extra dev --frozen`.
+- Verification completed successfully: `uv run ruff check .` reported all checks passed,
+  `uv run pytest -q` reported `620 passed in 1.34s`, and the package import smoke reported
+  `package_import=ok`.
+- Confirmed the local application was already running from this repository on
+  `127.0.0.1:18800`; `GET /` returned HTTP 200 with the expected security headers.
+- Verified the established local startup command remains:
+  `uv run --env-file .env uvicorn ai_electronics_lab.web.app:app --host 127.0.0.1 --port 18800 --no-server-header`.
+- Executed one bounded natural-language request for each supported topology through
+  `POST /api/orchestrate`:
+  - RC low-pass: HTTP 200, validated `rc_low_pass` plan, final verdict `PASS`;
+  - RC high-pass: HTTP 200, validated `rc_high_pass` plan, final verdict `PASS`;
+  - resistive divider: HTTP 200, validated `resistive_divider` plan, final verdict `PASS`.
+- Each successful request produced the complete 12-event safe stage trace from
+  `request.received` through `request.completed`.
+- No credentials, raw provider responses, subprocess output, or private configuration were
+  recorded.
+- Confirmed the useful product workflow is complete and frozen. No additional product features
+  are required for the remaining competition-alignment work.
