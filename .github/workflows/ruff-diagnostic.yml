@@ -31,12 +31,14 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --extra dev --frozen
 
-      - name: Capture Ruff output
-        run: uv run ruff check . --output-format=concise > ruff-output.txt 2>&1 || true
+      - name: Generate Ruff fix
+        run: |
+          uv run ruff check . --fix
+          git diff -- src/ai_electronics_lab/planning/structured_openrouter.py > ruff-fix.patch
 
-      - name: Upload Ruff output
+      - name: Upload Ruff fix
         uses: actions/upload-artifact@v4
         with:
-          name: ruff-output
-          path: ruff-output.txt
+          name: ruff-fix
+          path: ruff-fix.patch
           if-no-files-found: error
