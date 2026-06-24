@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from .openrouter import plan_circuit_request
+from .structured_openrouter import plan_circuit_request
 
 __all__ = ["plan_circuit_request"]
