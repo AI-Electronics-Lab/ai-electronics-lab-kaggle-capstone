@@ -1,4 +1,4 @@
-"""Structured-output OpenRouter adapter for bounded CircuitPlan generation."""
+"""Forced-tool OpenRouter adapter for bounded CircuitPlan generation."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from .openrouter import (
     _CANDIDATE_KEYS,
     _CHAT_COMPLETIONS_URL,
     _CONNECT_TIMEOUT_SECONDS,
+    _MAX_CONTENT_BYTES,
     _MAX_REQUEST_BYTES,
     _READ_TIMEOUT_SECONDS,
     CircuitPlannerError,
@@ -22,7 +23,6 @@ from .openrouter import (
     _candidate_to_plan,
     _decode_json_bytes,
     _decode_json_text,
-    _extract_provider_content,
     _is_repairable,
     _planner_error,
     _read_bounded_response,
@@ -158,17 +158,22 @@ _PLAN_SCHEMA = {
     "additionalProperties": False,
 }
 
-_RESPONSE_FORMAT = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "bounded_circuit_plan",
-        "strict": True,
-        "schema": _PLAN_SCHEMA,
+_TOOL_NAME = "submit_circuit_plan"
+_TOOL_DEFINITION = {
+    "type": "function",
+    "function": {
+        "name": _TOOL_NAME,
+        "description": "Submit exactly one bounded circuit plan for deterministic validation.",
+        "parameters": _PLAN_SCHEMA,
     },
+}
+_TOOL_CHOICE = {
+    "type": "function",
+    "function": {"name": _TOOL_NAME},
 }
 
 _SYSTEM_MESSAGE = (
-    "Create exactly one bounded circuit plan using the supplied JSON schema. "
+    "Create exactly one bounded circuit plan and submit it only through the submit_circuit_plan tool. "
     "Use SI base units and numeric JSON values, never unit-bearing strings. "
     "For RC filters, frequencies must be positive, unique, and strictly increasing. "
     "For a resistive divider, requested_frequencies_hz must be empty. "
@@ -179,8 +184,8 @@ _SYSTEM_MESSAGE = (
 )
 
 _REPAIR_MESSAGE = (
-    "Correct the plan so it satisfies both the supplied JSON schema and the deterministic validation "
-    "error codes. Preserve the user's requested topology and values. Use SI-base-unit numbers."
+    "Correct the plan so it satisfies both the submit_circuit_plan tool schema and the deterministic "
+    "validation error codes. Preserve the user's requested topology and values. Use SI-base-unit numbers."
 )
 
 
@@ -210,7 +215,8 @@ def _build_request_body(
         {"role": "system", "content": _SYSTEM_MESSAGE},
         {"role": "user", "content": user_content},
     ]
-    legacy["response_format"] = _RESPONSE_FORMAT
+    legacy["tools"] = [_TOOL_DEFINITION]
+    legacy["tool_choice"] = _TOOL_CHOICE
     legacy["provider"] = {"require_parameters": True}
     return legacy
 
@@ -220,7 +226,7 @@ async def plan_circuit_request(
     *,
     config: OpenRouterPlannerConfig | None = None,
 ) -> CircuitPlan:
-    """Return one validated CircuitPlan using OpenRouter structured outputs."""
+    """Return one validated CircuitPlan using one forced OpenRouter tool call."""
 
     return await _plan_circuit_request_with_transport(prompt, config=config, transport=None)
 
@@ -319,8 +325,54 @@ async def _request_candidate(
         raise _planner_error("planner.provider.network_error") from None
 
     envelope = _decode_json_bytes(response_bytes, provider=True)
-    content = _extract_provider_content(envelope)
-    return _extract_plan_candidate(content)
+    return _extract_tool_plan_candidate(envelope)
+
+
+def _extract_tool_plan_candidate(envelope: Any) -> str:
+    if type(envelope) is not dict:
+        raise _planner_error("planner.provider.envelope_invalid")
+    choices = envelope.get("choices")
+    if type(choices) is not list or len(choices) != 1:
+        raise _planner_error("planner.provider.envelope_invalid", ("choices",))
+    choice = choices[0]
+    if type(choice) is not dict:
+        raise _planner_error("planner.provider.envelope_invalid", ("choices", 0))
+    if "error" in choice:
+        raise _planner_error("planner.provider.envelope_invalid", ("choices", 0, "error"))
+    if choice.get("finish_reason") != "tool_calls":
+        raise _planner_error(
+            "planner.provider.envelope_invalid", ("choices", 0, "finish_reason")
+        )
+    message = choice.get("message")
+    if type(message) is not dict:
+        raise _planner_error("planner.provider.envelope_invalid", ("choices", 0, "message"))
+    if message.get("content") not in (None, ""):
+        raise _planner_error(
+            "planner.provider.envelope_invalid", ("choices", 0, "message", "content")
+        )
+    tool_calls = message.get("tool_calls")
+    if type(tool_calls) is not list or len(tool_calls) != 1:
+        raise _planner_error(
+            "planner.provider.envelope_invalid", ("choices", 0, "message", "tool_calls")
+        )
+    tool_call = tool_calls[0]
+    if type(tool_call) is not dict or tool_call.get("type") != "function":
+        raise _planner_error(
+            "planner.provider.envelope_invalid", ("choices", 0, "message", "tool_calls")
+        )
+    function = tool_call.get("function")
+    if type(function) is not dict or function.get("name") != _TOOL_NAME:
+        raise _planner_error(
+            "planner.provider.envelope_invalid", ("choices", 0, "message", "tool_calls")
+        )
+    arguments = function.get("arguments")
+    if type(arguments) is not str or arguments == "":
+        raise _planner_error(
+            "planner.provider.envelope_invalid", ("choices", 0, "message", "tool_calls")
+        )
+    if len(arguments.encode("utf-8")) > _MAX_CONTENT_BYTES:
+        raise _planner_error("planner.provider.response_oversized")
+    return _extract_plan_candidate(arguments)
 
 
 def _extract_plan_candidate(content: str) -> str:

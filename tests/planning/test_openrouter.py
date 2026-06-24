@@ -838,7 +838,31 @@ def test_public_planner_constructs_isolated_async_client_without_real_network(mo
                     "content": content,
                 }
             )
-            return StreamContext(response_for(envelope(json_candidate())))
+            tool_arguments = json.dumps({"plan": candidate()}, separators=(",", ":"))
+            return StreamContext(
+                response_for(
+                    {
+                        "choices": [
+                            {
+                                "finish_reason": "tool_calls",
+                                "message": {
+                                    "content": None,
+                                    "tool_calls": [
+                                        {
+                                            "id": "call_test",
+                                            "type": "function",
+                                            "function": {
+                                                "name": "submit_circuit_plan",
+                                                "arguments": tool_arguments,
+                                            },
+                                        }
+                                    ],
+                                },
+                            }
+                        ]
+                    }
+                )
+            )
 
     monkeypatch.setenv("HTTP_PROXY", "http://proxy.invalid:8080")
     monkeypatch.setenv("HTTPS_PROXY", "http://proxy.invalid:8443")

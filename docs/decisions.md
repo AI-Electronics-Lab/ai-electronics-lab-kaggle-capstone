@@ -186,3 +186,15 @@ model to create trusted netlists, shell commands, arbitrary tool choices, paths,
 connectivity, simulation evidence, verification evidence, or final engineering claims.
 
 Keep PR #13 separate from the existing web API and UI.
+
+## ADR-020: Forced bounded OpenRouter plan tool
+
+Use one fixed function tool named `submit_circuit_plan` for the default free OpenRouter model and
+force that exact tool with `tool_choice`. Do not send `response_format`: the current free provider
+endpoint accepts `tools` and `tool_choice` but rejects the JSON-schema response-format parameter
+when `provider.require_parameters` is enabled.
+
+Treat tool arguments as untrusted bounded JSON. Accept exactly one tool call, reject parallel prose
+and unexpected tool names, then pass the decoded candidate through the existing exact field checks,
+`CircuitPlan` construction, and deterministic validator. This transport change does not authorize
+arbitrary tools or change the one-repair limit, simulation, evidence, or verdict boundaries.
