@@ -171,5 +171,9 @@ def test_readme_reports_current_skill_status() -> None:
         "Agent Skill: included at "
         "`.agents/skills/verified-circuit-simulation/SKILL.md`"
     ) in readme
-    assert "Google ADK adapter: not yet included" in readme
+    assert (
+        "Google ADK adapter: included at `src/ai_electronics_lab/adk/`"
+        in readme
+    )
+    assert "Google ADK adapter: not yet included" not in readme
     assert "Agent Skill: not yet included" not in readme

@@ -44,11 +44,14 @@ paths are not public response fields.
 The current supported interface is one localhost-only FastAPI application with a self-contained
 browser page and bounded JSON routes. The service is intentionally bound to `127.0.0.1`.
 
-## Future alignment adapters
+## Competition-alignment adapters
 
-A repository Agent Skill and a Google ADK adapter may be added as thin competition-alignment layers.
-They must guide or call the existing orchestration entry point and must not duplicate or replace the
-deterministic electronics core.
+The repository Agent Skill is a guidance-only development layer. The optional Google ADK 2.3.x
+adapter is a public graph `Workflow` containing a registered `FunctionTool` that delegates one prompt
+to `run_bounded_agent_orchestration()`.
+
+Neither adapter replaces, duplicates, or gains authority over the deterministic electronics core.
+The FastAPI application remains a separate interface and does not run through ADK.
 
 No MCP server, persistence layer, memory service, cloud deployment, or general-purpose CLI is part of
 the finished runtime architecture.

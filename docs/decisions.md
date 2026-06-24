@@ -248,3 +248,18 @@ The merged GitHub `main` branch, repository specifications, implementation, and 
 sources of truth. The Skill must direct agents back to those files, preserve spec-first development,
 and stop on unexplained or out-of-scope dirty state, divergence, scope expansion, secret
 exposure, or failed verification.
+
+## ADR-024: Optional Google ADK graph adapter
+
+Add `google-adk>=2.3,<2.4` as an optional dependency and expose one public ADK graph `Workflow`
+containing a genuine `FunctionTool`. The tool accepts only a natural-language `prompt` and delegates
+to `run_bounded_agent_orchestration()`.
+
+Do not add an ADK LLM agent, Gemini model, alternate planner, framework retry, memory, persistence,
+MCP, A2A, cloud service, or FastAPI route. A fresh in-memory ADK session exists only for one adapter
+invocation and is discarded afterward.
+
+The adapter canonicalizes known orchestration failures through the existing error vocabulary and
+collapses unexpected adapter failures to `orchestration.internal_error`. It does not duplicate
+prompt validation, provider transport, CircuitPlan validation, circuit construction, SPICE
+generation, ngspice execution, parsing, tolerances, evidence, or verdict logic.
