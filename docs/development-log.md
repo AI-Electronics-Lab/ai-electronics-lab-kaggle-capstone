@@ -258,3 +258,79 @@
   invariants, and added focused regression tests.
 - The remediation remains unstaged and uncommitted pending server-side full-suite, Ruff,
   compilation, ngspice, wheel, and audit verification.
+
+## PR #13 bounded OpenRouter planner — specification checkpoint
+
+- Created `feat/bounded-openrouter-planner` from clean merged-main commit `c0e6c3ea9b999249033fe1a4b7987aed1d2963d3`.
+- Confirmed `.gitignore` already ignores `.env` while allowing tracked `.env.example`.
+- Defined the fixed OpenRouter endpoint, default model, environment contract, request and response
+  bounds, transport deadlines, provider-envelope checks, exact candidate JSON boundary, stable
+  errors, unsupported-topology behavior, one-repair policy, dependency choice, acceptance tests,
+  exact file allowlist, and explicit exclusions.
+- Required local JSON enforcement instead of claiming provider-enforced structured-output support.
+- Kept the planner outside the web API, UI, simulator, netlist builder, parser, verifier, and final
+  explanation layers.
+- No implementation source, tests, dependencies, staging, commit, push, or pull request were
+  created in this checkpoint.
+
+## PR #13 bounded OpenRouter CircuitPlan planner — uncommitted implementation checkpoint
+
+- Implemented the public `ai_electronics_lab.planning` package for the bounded OpenRouter
+  CircuitPlan planner.
+- Kept provider output untrusted until strict envelope parsing, exact candidate JSON decoding,
+  exact candidate-field checks, `CircuitPlan` construction, and existing deterministic validation
+  all succeed.
+- Added fixed-request OpenRouter transport behavior with prompt/configuration bounds, secret-safe
+  stable errors, no `.env` autoloading, no ambient proxy trust, disabled redirects, bounded
+  response reads, and one narrowly bounded repair request.
+- Added mocked-transport planning tests covering request construction, provider and candidate
+  rejection boundaries, all supported topologies, repair success/exhaustion, and disclosure limits.
+- Promoted HTTPX2 to a runtime dependency and updated `.env.example` with only the explicit
+  OpenRouter configuration contract.
+- This checkpoint remains unstaged and uncommitted pending verification and review.
+
+## PR #13 independent-audit remediation
+
+- Remediated the release-blocking JSON integer boundary by rejecting decimal integer literals
+  longer than Python's configured conversion limit before unsafe conversion, and by normalizing
+  oversized numeric validation failures to stable planner errors with the existing one-repair
+  policy.
+- Remediated malformed OpenRouter base-URL port handling by validating the exact approved netloc
+  without exposing `urllib.parse` exception text.
+- Moved mocked HTTP transport injection behind the private `_plan_circuit_request_with_transport()`
+  test seam so the exported coroutine keeps the documented `prompt, *, config=None` signature.
+- Added mocked regressions for hostile JSON integers in topology parameters and requested
+  frequencies, repair success and exhaustion, malformed direct/env base-URL ports, production
+  client isolation from ambient proxy and netrc settings, disabled redirects, and safe error
+  serialization.
+- Local remediation verification completed with focused and full planning-safe audit commands; changes remain unstaged and uncommitted.
+
+## PR #13 final-audit remediation
+
+- Rejected OpenRouter base URLs with non-empty `urllib.parse` path parameters, including encoded
+  semicolon payloads and parameter/query/fragment combinations, without exposing rejected values or
+  parser internals in stable configuration errors.
+- Strengthened supported-topology planner coverage to assert exact returned plan fields and
+  deterministic JSON round-trip content instead of a tautological serialization assertion.
+
+## PR #13 safe-error-path remediation checkpoint
+
+- Remediated the remaining safe-error disclosure routes in the bounded OpenRouter planner by
+  normalizing planner error paths through a closed implementation-owned vocabulary.
+- Unknown candidate keys, duplicate JSON keys, hostile topology-parameter names, and malformed
+  validation paths now collapse to fixed safe tokens before entering `CircuitPlannerError`, repair
+  prompts, serialization, or string representations.
+- Preserved the validated original bounded prompt in repair requests as required by the
+  specification, while excluding raw provider output and hostile path material; repair messages
+  contain only the trusted original task context plus stable error code/path data.
+- Added hostile-key regression coverage for direct error construction, unknown and duplicate
+  provider/candidate keys, repair success, repair exhaustion, and preserved known safe schema paths.
+
+## PR #13 repair-request contract remediation checkpoint
+
+- Restored the validated original bounded prompt to the single permitted repair request, matching
+  the authoritative planner specification.
+- Encoded the original prompt and sanitized validation evidence in one deterministic repair-context
+  JSON object without including the first provider response or hostile provider-controlled paths.
+- Corrected the contradictory regression test and development-log statement while preserving the
+  closed safe-error vocabulary and one-repair limit.

@@ -168,3 +168,21 @@ Also enforce the documented `VerificationComparison` schema at construction: met
 nonnegative errors, positive fixed-policy limits, value/error coherence, and status/reason
 classification coherence. These checks harden the public immutable evidence contract without
 changing normal verifier output.
+
+## ADR-019: Bounded OpenRouter CircuitPlan planner
+
+Add one bounded natural-language planner before the canonical CircuitPlan boundary.
+
+Use the fixed OpenRouter chat-completions endpoint with
+`openai/gpt-oss-120b:free` as the default model. Provider output remains untrusted candidate data
+until it passes bounded provider-envelope parsing, exact local JSON decoding, exact candidate-field
+validation, CircuitPlan construction, and the existing deterministic validator.
+
+Do not send or rely on `response_format` for the default free model. Require one JSON object through
+the fixed prompt and enforce the contract locally.
+
+Permit one initial provider call and at most one narrowly bounded repair request. Never allow the
+model to create trusted netlists, shell commands, arbitrary tool choices, paths, circuit
+connectivity, simulation evidence, verification evidence, or final engineering claims.
+
+Keep PR #13 separate from the existing web API and UI.
