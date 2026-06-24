@@ -12,7 +12,7 @@ Record only reproducible, reviewable, and non-sensitive evidence.
 - generated engineering schematic;
 - reproducible `PASS`, `WARN`, and `FAIL` examples where deterministic fixtures permit them;
 - complete automated test output;
-- secret-scan output;
+- recorded current-tree and full-history secret-scan evidence in `docs/secret-scan-evidence.md`;
 - Agent Skill validation after the Skill is added;
 - Google ADK adapter validation after the adapter is added;
 - meaningful Codex contribution evidence;

@@ -410,3 +410,15 @@
   execution is required.
 - Updated GitHub CI to install both the `dev` and `adk` extras before collecting the full test suite,
   matching `scripts/verify.sh`.
+
+## Phase 4 current-tree and full-history secret scan
+
+- Scanned canonical `main` commit `2d09e7be962d1e46893db36a4e2a7334e0920720`.
+- Used Gitleaks 8.30.1 with full redaction.
+- Scanned the exported tracked tree: exit code 0, zero findings.
+- Scanned all 88 reachable Git revisions using `--log-opts="--all"`: exit code 0, zero findings.
+- Retained JSON reports outside the repository and published only the safe reproducible summary.
+- Added `docs/secret-scan-evidence.md` and linked the result from the security and submission
+  evidence documentation.
+- Verification: `bash scripts/verify.sh` passed; Ruff passed; 634 tests passed; package
+  import smoke passed.
