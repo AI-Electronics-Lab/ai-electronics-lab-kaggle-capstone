@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import unicodedata
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
@@ -28,6 +29,11 @@ from ai_electronics_lab.contracts.circuit_plan import (
     MIN_FREQUENCY_HZ,
     MIN_RESISTANCE_OHMS,
     SCHEMA_VERSION,
+)
+from ai_electronics_lab.orchestration import (
+    BoundedAgentOrchestrationError,
+    BoundedAgentOrchestrationResult,
+    run_bounded_agent_orchestration,
 )
 from ai_electronics_lab.simulation import (
     SIMULATION_RAW_PARSER_VERSION,
@@ -54,10 +60,13 @@ MAX_REQUEST_BODY_BYTES = 8 * 1024
 MAX_UI_FREQUENCIES = 8
 
 _MAX_SCHEMATIC_BYTES = 64 * 1024
+_MAX_ORCHESTRATION_PROMPT_CODE_POINTS = 4000
+_MAX_ORCHESTRATION_PROMPT_BYTES = 16384
 _MAX_NETLIST_RESPONSE_BYTES = MAX_UI_FREQUENCIES * 64 * 1024
 _INDEX_PATH = Path(__file__).with_name("index.html")
 
 SimulationService = Callable[[object], dict[str, Any]]
+OrchestrationService = Callable[[str], Any]
 Runner = Callable[[SimulationDeck], Any]
 Parser = Callable[[Any], SimulationParsedResults]
 Verifier = Callable[[CircuitPlan, SimulationParsedResults], SimulationVerificationResults]
@@ -202,6 +211,7 @@ def simulate_request(
 
 def create_app(
     simulation_service: SimulationService = simulate_request,
+    orchestration_service: OrchestrationService = run_bounded_agent_orchestration,
 ) -> FastAPI:
     """Create the localhost application without external documentation assets."""
 
@@ -212,7 +222,9 @@ def create_app(
         openapi_url=None,
     )
     application.state.simulation_service = simulation_service
+    application.state.orchestration_service = orchestration_service
     application.state.simulation_lock = asyncio.Lock()
+    application.state.orchestration_lock = asyncio.Lock()
 
     @application.middleware("http")
     async def add_security_headers(
@@ -287,6 +299,34 @@ def create_app(
             )
 
         return _json_response(result, status_code=200)
+
+    @application.post(
+        "/api/orchestrate",
+        include_in_schema=False,
+    )
+    async def orchestrate(request: Request) -> Response:
+        payload = await _read_orchestration_json(request)
+        lock: asyncio.Lock = application.state.orchestration_lock
+
+        if lock.locked():
+            raise WebUIError(
+                "orchestration.request.busy",
+                (),
+                "Another orchestration request is already running.",
+                429,
+            )
+
+        prompt = _build_orchestration_prompt(payload)
+        async with lock:
+            try:
+                result = await run_in_threadpool(
+                    application.state.orchestration_service,
+                    prompt,
+                )
+            except BoundedAgentOrchestrationError as exc:
+                raise WebUIError(exc.code, exc.path, exc.message, exc.status_code) from None
+
+        return _json_response(_safe_orchestration_result_dict(result), status_code=200)
 
     return application
 
@@ -394,6 +434,200 @@ async def _read_bounded_json(request: Request) -> object:
             "Request body must contain valid JSON.",
             400,
         ) from None
+
+
+async def _read_orchestration_json(request: Request) -> object:
+    media_type = (
+        request.headers.get("content-type", "")
+        .split(";", 1)[0]
+        .strip()
+        .lower()
+    )
+    if media_type != "application/json":
+        raise WebUIError(
+            "orchestration.request.content_type",
+            (),
+            "Content-Type must be application/json.",
+            400,
+        )
+
+    content_encoding = (
+        request.headers.get("content-encoding", "").strip().lower()
+    )
+    if content_encoding not in {"", "identity"}:
+        raise WebUIError(
+            "orchestration.request.encoding",
+            (),
+            "Compressed request bodies are not accepted.",
+            400,
+        )
+
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            declared_length = int(content_length)
+        except ValueError:
+            raise WebUIError(
+                "orchestration.request.malformed_json",
+                (),
+                "Content-Length must be a valid non-negative integer.",
+                400,
+            ) from None
+
+        if declared_length < 0:
+            raise WebUIError(
+                "orchestration.request.malformed_json",
+                (),
+                "Content-Length must be a valid non-negative integer.",
+                400,
+            ) from None
+
+        if declared_length > MAX_REQUEST_BODY_BYTES:
+            raise WebUIError(
+                "orchestration.request.too_large",
+                (),
+                "Request body exceeds the local size limit.",
+                413,
+            )
+
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_REQUEST_BODY_BYTES:
+            raise WebUIError(
+                "orchestration.request.too_large",
+                (),
+                "Request body exceeds the local size limit.",
+                413,
+            )
+
+    if not body:
+        raise WebUIError(
+            "orchestration.request.empty",
+            (),
+            "Request body must not be empty.",
+            400,
+        )
+
+    try:
+        text = bytes(body).decode("utf-8")
+    except UnicodeDecodeError:
+        raise WebUIError(
+            "orchestration.request.encoding",
+            (),
+            "Request body must be valid UTF-8.",
+            400,
+        ) from None
+
+    try:
+        return json.loads(
+            text,
+            object_pairs_hook=_pairs_to_orchestration_dict,
+            parse_constant=_reject_orchestration_json_constant,
+        )
+    except WebUIError:
+        raise
+    except (json.JSONDecodeError, RecursionError, ValueError):
+        raise WebUIError(
+            "orchestration.request.malformed_json",
+            (),
+            "Request body must contain valid JSON.",
+            400,
+        ) from None
+
+
+def _pairs_to_orchestration_dict(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+
+    for key, value in pairs:
+        if key in result:
+            raise WebUIError(
+                "orchestration.request.duplicate_key",
+                (),
+                "Duplicate JSON object keys are not accepted.",
+                400,
+            )
+        result[key] = value
+
+    return result
+
+
+def _reject_orchestration_json_constant(_value: str) -> Any:
+    raise WebUIError(
+        "orchestration.request.non_finite",
+        (),
+        "Non-finite JSON numbers are not accepted.",
+        400,
+    )
+
+
+def _build_orchestration_prompt(payload: object) -> str:
+    if type(payload) is not dict:
+        raise WebUIError(
+            "orchestration.request.object_required",
+            (),
+            "Request body must be a JSON object.",
+            422,
+        )
+    if set(payload) != {"prompt"}:
+        raise WebUIError(
+            "orchestration.request.object_required",
+            ("prompt",),
+            "Request body must contain only a prompt field.",
+            422,
+        )
+    prompt = payload["prompt"]
+    if type(prompt) is not str:
+        raise WebUIError(
+            "orchestration.request.prompt_invalid",
+            ("prompt",),
+            "Prompt must be a string.",
+            422,
+        )
+
+    bounded_prompt = prompt.strip()
+    if not bounded_prompt:
+        raise WebUIError(
+            "orchestration.request.prompt_invalid",
+            ("prompt",),
+            "Prompt must not be empty.",
+            422,
+        )
+    if len(bounded_prompt) > _MAX_ORCHESTRATION_PROMPT_CODE_POINTS:
+        raise WebUIError(
+            "orchestration.request.prompt_invalid",
+            ("prompt",),
+            "Prompt is too large.",
+            422,
+        )
+    if len(bounded_prompt.encode("utf-8")) > _MAX_ORCHESTRATION_PROMPT_BYTES:
+        raise WebUIError(
+            "orchestration.request.prompt_invalid",
+            ("prompt",),
+            "Prompt is too large.",
+            422,
+        )
+    if any(unicodedata.category(ch).startswith("C") for ch in bounded_prompt):
+        raise WebUIError(
+            "orchestration.request.prompt_invalid",
+            ("prompt",),
+            "Prompt must not contain control characters.",
+            422,
+        )
+    return bounded_prompt
+
+
+def _safe_orchestration_result_dict(result: object) -> dict[str, Any]:
+    if type(result) is not BoundedAgentOrchestrationResult:
+        raise WebUIError(
+            "orchestration.internal_error",
+            (),
+            "The bounded orchestration pipeline could not complete.",
+            500,
+        )
+    return json.loads(result.to_json())
 
 
 def _pairs_to_dict(

@@ -7,6 +7,11 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from ai_electronics_lab.contracts import CircuitPlan
+from ai_electronics_lab.orchestration import (
+    BoundedAgentOrchestrationResult,
+    run_bounded_agent_orchestration,
+)
 from ai_electronics_lab.simulation import (
     SIMULATION_RAW_PARSER_VERSION,
     SimulationComplexValue,
@@ -15,7 +20,7 @@ from ai_electronics_lab.simulation import (
     SimulationRunMeasurements,
     SimulationRunnerError,
 )
-from ai_electronics_lab.verification import SimulationVerificationError
+from ai_electronics_lab.verification import SimulationVerificationError, verify_simulation_results
 from ai_electronics_lab.web import (
     MAX_REQUEST_BODY_BYTES,
     WebUIError,
@@ -124,6 +129,48 @@ def _simulate_without_ngspice(
     )
 
 
+def _orchestration_plan() -> CircuitPlan:
+    return CircuitPlan(
+        schema_version='1.0',
+        topology='resistive_divider',
+        analysis='dc',
+        parameters={
+            'input_voltage_volts': 5.0,
+            'resistance_bottom_ohms': 10_000.0,
+            'resistance_top_ohms': 10_000.0,
+        },
+        requested_frequencies_hz=(),
+        assumptions=('Equal resistors produce a 0.5 output ratio.',),
+    )
+
+
+def _orchestration_parsed_results() -> SimulationParsedResults:
+    run = SimulationRunMeasurements(
+        run_id='dc-op',
+        topology='resistive_divider',
+        analysis_kind='dc',
+        frequency_hz=None,
+        vin_voltage=SimulationComplexValue(real=5.0, imag=0.0),
+        vout_voltage=SimulationComplexValue(real=2.5, imag=0.0),
+    )
+    return SimulationParsedResults(
+        version=SIMULATION_RAW_PARSER_VERSION,
+        runs=(run,),
+    )
+
+
+def _orchestration_result(prompt: str) -> BoundedAgentOrchestrationResult:
+    plan = _orchestration_plan()
+    parsed = _orchestration_parsed_results()
+    return run_bounded_agent_orchestration(
+        prompt,
+        planner=lambda received_prompt, *, config=None: plan,
+        runner=lambda deck: object(),
+        parser=lambda evidence: parsed,
+        verifier=verify_simulation_results,
+    )
+
+
 def _all_mapping_keys(value: object) -> set[str]:
     keys: set[str] = set()
 
@@ -144,7 +191,14 @@ def test_home_page_is_self_contained_and_hardened() -> None:
 
     assert response.status_code == 200
     assert "AI Electronics Lab" in response.text
+    assert "Run Orchestration" in response.text
     assert "Run Simulation" in response.text
+    assert 'id="orchestration-form"' in response.text
+    assert 'id="prompt-input"' in response.text
+    assert 'data-prompt-example="divider"' in response.text
+    assert 'id="stage-trace-panel"' in response.text
+    assert 'id="stage-trace-list"' in response.text
+    assert '/api/orchestrate' in response.text
     assert "innerHTML" not in response.text
     assert "<script src=" not in response.text
     assert "<link rel=" not in response.text
@@ -153,6 +207,7 @@ def test_home_page_is_self_contained_and_hardened() -> None:
     assert 'id="verification-panel"' in response.text
     assert 'id="verification-summary"' in response.text
     assert 'id="verification-runs"' in response.text
+    assert "renderStageTrace" in response.text
     assert "renderVerification" in response.text
     assert ".textContent" in response.text
     assert '].join("\\n");' in response.text
@@ -623,3 +678,160 @@ def test_optional_real_ngspice_pipeline_smoke(payload: dict[str, object]) -> Non
     assert result["status"] == "ok"
     assert result["verification"]["status"] == "PASS"
     assert all(run["status"] == "PASS" for run in result["verification"]["runs"])
+
+
+class _BusyOrchestrationLock:
+    def locked(self) -> bool:
+        return True
+
+
+def test_orchestrate_route_preserves_manual_simulation_route() -> None:
+    captured: dict[str, object] = {}
+
+    def orchestration_service(prompt: str) -> BoundedAgentOrchestrationResult:
+        captured['prompt'] = prompt
+        return _orchestration_result(prompt)
+
+    client = TestClient(
+        create_app(
+            simulation_service=_simulate_without_ngspice,
+            orchestration_service=orchestration_service,
+        )
+    )
+
+    orchestration_response = client.post(
+        '/api/orchestrate',
+        json={'prompt': 'Design a resistive divider'},
+    )
+    simulation_response = client.post(
+        '/api/simulate',
+        json=_valid_divider(),
+    )
+
+    assert orchestration_response.status_code == 200
+    assert orchestration_response.json()['status'] == 'PASS'
+    assert orchestration_response.json()['version'] == '1.0'
+    assert 'explanation' not in orchestration_response.json()
+    assert orchestration_response.json()['stage_trace'][0]['stage'] == 'request.received'
+    assert captured['prompt'] == 'Design a resistive divider'
+    assert simulation_response.status_code == 200
+    assert simulation_response.json()['status'] == 'ok'
+
+
+def test_orchestrate_rejects_arbitrary_dict_result() -> None:
+    client = TestClient(
+        create_app(
+            simulation_service=_simulate_without_ngspice,
+            orchestration_service=lambda prompt: {'prompt': prompt, 'status': 'ok'},
+        )
+    )
+
+    response = client.post(
+        '/api/orchestrate',
+        json={'prompt': 'Design a resistive divider'},
+    )
+
+    assert response.status_code == 500
+    assert response.json()['error']['code'] == 'orchestration.internal_error'
+
+
+@pytest.mark.parametrize(
+    ('body', 'headers', 'status_code', 'code'),
+    [
+        (b'', {'Content-Type': 'application/json'}, 400, 'orchestration.request.empty'),
+        (b'{', {'Content-Type': 'application/json'}, 400, 'orchestration.request.malformed_json'),
+        (
+            b'{"prompt":"x","prompt":"y"}',
+            {'Content-Type': 'application/json'},
+            400,
+            'orchestration.request.duplicate_key',
+        ),
+        (
+            b'{"prompt":NaN}',
+            {'Content-Type': 'application/json'},
+            400,
+            'orchestration.request.non_finite',
+        ),
+        (
+            b'{' + (b' ' * MAX_REQUEST_BODY_BYTES) + b'}',
+            {'Content-Type': 'application/json'},
+            413,
+            'orchestration.request.too_large',
+        ),
+        (
+            b'{}',
+            {'Content-Type': 'text/plain'},
+            400,
+            'orchestration.request.content_type',
+        ),
+        (
+            b'{"topology":"x"}',
+            {'Content-Type': 'application/json'},
+            422,
+            'orchestration.request.object_required',
+        ),
+    ],
+)
+def test_orchestrate_request_hardening(body, headers, status_code, code) -> None:
+    client = TestClient(
+        create_app(
+            simulation_service=_simulate_without_ngspice,
+            orchestration_service=lambda prompt: _orchestration_result(prompt),
+        )
+    )
+
+    response = client.post('/api/orchestrate', content=body, headers=headers)
+
+    assert response.status_code == status_code
+    assert response.json()['error']['code'] == code
+
+
+@pytest.mark.parametrize(
+    ('prompt', 'expected_code'),
+    [
+        ('   ', 'orchestration.request.prompt_invalid'),
+        ('a' * 4001, 'orchestration.request.prompt_invalid'),
+        ('Design a resistive divider', 'orchestration.request.prompt_invalid'),
+    ],
+)
+def test_orchestrate_prompt_validation_rejects_invalid_prompts(prompt, expected_code) -> None:
+    called = False
+
+    def orchestration_service(_prompt: str) -> BoundedAgentOrchestrationResult:
+        nonlocal called
+        called = True
+        return _orchestration_result(_prompt)
+
+    client = TestClient(
+        create_app(
+            simulation_service=_simulate_without_ngspice,
+            orchestration_service=orchestration_service,
+        )
+    )
+
+    response = client.post(
+        '/api/orchestrate',
+        json={'prompt': prompt},
+    )
+
+    assert response.status_code == 422
+    assert response.json()['error']['code'] == expected_code
+    assert called is False
+
+
+def test_orchestrate_prompt_validation_and_busy_lock() -> None:
+    client = TestClient(
+        create_app(
+            simulation_service=_simulate_without_ngspice,
+            orchestration_service=lambda prompt: _orchestration_result(prompt),
+        )
+    )
+
+    client.app.state.orchestration_lock = _BusyOrchestrationLock()
+    busy_response = client.post(
+        '/api/orchestrate',
+        json={'prompt': 'Design a resistive divider'},
+    )
+
+    assert busy_response.status_code == 429
+    assert busy_response.json()['error']['code'] == 'orchestration.request.busy'
