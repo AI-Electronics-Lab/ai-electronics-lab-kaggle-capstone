@@ -1,9 +1,10 @@
-"""Forced-tool OpenRouter adapter for bounded CircuitPlan generation."""
+"""Forced-tool OpenRouter adapter for bounded CircuitPlan value extraction."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import math
 from collections.abc import Sequence
 from typing import Any
 
@@ -39,122 +40,59 @@ def _number(description: str) -> dict[str, Any]:
     return {"type": "number", "description": description}
 
 
-def _string(description: str) -> dict[str, Any]:
-    return {"type": "string", "description": description}
-
-
 def _array(item_schema: dict[str, Any], description: str) -> dict[str, Any]:
     return {"type": "array", "items": item_schema, "description": description}
 
 
-def _plan_variant(
-    *,
-    topology: str,
-    analysis: str,
-    parameters: dict[str, dict[str, Any]],
-    frequency_description: str,
-) -> dict[str, Any]:
-    return {
-        "type": "object",
-        "properties": {
-            "schema_version": {
-                "type": "string",
-                "enum": ["1.0"],
-                "description": "CircuitPlan schema version; always 1.0.",
-            },
-            "topology": {
-                "type": "string",
-                "enum": [topology],
-                "description": f"Selected supported topology; always {topology}.",
-            },
-            "analysis": {
-                "type": "string",
-                "enum": [analysis],
-                "description": f"Analysis required by the topology; always {analysis}.",
-            },
-            "parameters": {
-                "type": "object",
-                "properties": parameters,
-                "required": list(parameters),
-                "additionalProperties": False,
-            },
-            "requested_frequencies_hz": _array(
-                _number("Frequency in hertz as an SI-base-unit number."),
-                frequency_description,
-            ),
-            "assumptions": _array(
-                _string("A short trimmed printable engineering assumption."),
-                "Zero or more short engineering assumptions; never include explanations or results.",
-            ),
-        },
-        "required": [
-            "schema_version",
-            "topology",
-            "analysis",
-            "parameters",
-            "requested_frequencies_hz",
-            "assumptions",
-        ],
-        "additionalProperties": False,
+_FLAT_VALUE_KEYS = frozenset(
+    {
+        "topology",
+        "resistance_ohms",
+        "capacitance_farads",
+        "input_voltage_volts",
+        "resistance_top_ohms",
+        "resistance_bottom_ohms",
+        "requested_frequencies_hz",
     }
-
-
+)
+_REQUIRED_FLAT_VALUE_KEYS = [
+    "topology",
+    "resistance_ohms",
+    "capacitance_farads",
+    "input_voltage_volts",
+    "resistance_top_ohms",
+    "resistance_bottom_ohms",
+    "requested_frequencies_hz",
+]
 _PLAN_SCHEMA = {
     "type": "object",
     "properties": {
-        "plan": {
-            "description": "Exactly one bounded CircuitPlan candidate matching the user request.",
-            "anyOf": [
-                _plan_variant(
-                    topology="rc_low_pass",
-                    analysis="ac",
-                    parameters={
-                        "resistance_ohms": _number(
-                            "Positive resistance in ohms. Convert kΩ and MΩ to ohms."
-                        ),
-                        "capacitance_farads": _number(
-                            "Positive capacitance in farads. Convert µF, uF, nF, and pF to farads."
-                        ),
-                    },
-                    frequency_description=(
-                        "One or more positive, unique, strictly increasing frequencies in hertz."
-                    ),
-                ),
-                _plan_variant(
-                    topology="rc_high_pass",
-                    analysis="ac",
-                    parameters={
-                        "resistance_ohms": _number(
-                            "Positive resistance in ohms. Convert kΩ and MΩ to ohms."
-                        ),
-                        "capacitance_farads": _number(
-                            "Positive capacitance in farads. Convert µF, uF, nF, and pF to farads."
-                        ),
-                    },
-                    frequency_description=(
-                        "One or more positive, unique, strictly increasing frequencies in hertz."
-                    ),
-                ),
-                _plan_variant(
-                    topology="resistive_divider",
-                    analysis="dc",
-                    parameters={
-                        "input_voltage_volts": _number(
-                            "Non-zero finite input voltage magnitude in volts."
-                        ),
-                        "resistance_top_ohms": _number(
-                            "Positive top resistance in ohms. Convert kΩ and MΩ to ohms."
-                        ),
-                        "resistance_bottom_ohms": _number(
-                            "Positive bottom resistance in ohms. Convert kΩ and MΩ to ohms."
-                        ),
-                    },
-                    frequency_description="Always an empty array for a DC resistive divider.",
-                ),
-            ],
-        }
+        "topology": {
+            "type": "string",
+            "enum": ["rc_low_pass", "rc_high_pass", "resistive_divider"],
+            "description": "Exactly one supported circuit topology.",
+        },
+        "resistance_ohms": _number(
+            "RC resistance in ohms. Use zero only when topology is resistive_divider."
+        ),
+        "capacitance_farads": _number(
+            "RC capacitance in farads. Use zero only when topology is resistive_divider."
+        ),
+        "input_voltage_volts": _number(
+            "Divider input voltage in volts. Use zero for either RC topology."
+        ),
+        "resistance_top_ohms": _number(
+            "Divider top resistance in ohms. Use zero for either RC topology."
+        ),
+        "resistance_bottom_ohms": _number(
+            "Divider bottom resistance in ohms. Use zero for either RC topology."
+        ),
+        "requested_frequencies_hz": _array(
+            _number("Frequency in hertz as an SI-base-unit number."),
+            "Positive, unique, strictly increasing frequencies for RC; empty for a divider.",
+        ),
     },
-    "required": ["plan"],
+    "required": _REQUIRED_FLAT_VALUE_KEYS,
     "additionalProperties": False,
 }
 
@@ -163,7 +101,10 @@ _TOOL_DEFINITION = {
     "type": "function",
     "function": {
         "name": _TOOL_NAME,
-        "description": "Submit exactly one bounded circuit plan for deterministic validation.",
+        "description": (
+            "Submit one flat bounded circuit-value extraction for deterministic "
+            "CircuitPlan construction and validation."
+        ),
         "parameters": _PLAN_SCHEMA,
     },
 }
@@ -173,19 +114,23 @@ _TOOL_CHOICE = {
 }
 
 _SYSTEM_MESSAGE = (
-    "Create exactly one bounded circuit plan and submit it only through the submit_circuit_plan tool. "
+    "Call submit_circuit_plan exactly once with the seven flat schema fields. "
     "Use SI base units and numeric JSON values, never unit-bearing strings. "
-    "For RC filters, frequencies must be positive, unique, and strictly increasing. "
-    "For a resistive divider, requested_frequencies_hz must be empty. "
+    "Fill every field. For RC filters, use zero for all three divider-only fields and provide "
+    "positive, unique, strictly increasing frequencies. For a resistive divider, use zero for "
+    "the two RC-only fields and provide an empty requested_frequencies_hz array. "
     "When the user omits values, use deterministic demonstration defaults: "
     "RC resistance 1000 ohms, capacitance 0.000001 farads, frequencies [10,100,1000] Hz; "
     "divider input 5 volts with 1000-ohm top and bottom resistors. "
-    "Do not include netlists, SPICE, commands, paths, evidence, verification, status, or explanations."
+    "Do not invent components, nested analysis objects, schema fields, assumptions, netlists, "
+    "SPICE, commands, paths, evidence, verification, status, prose, or explanations."
 )
 
 _REPAIR_MESSAGE = (
-    "Correct the plan so it satisfies both the submit_circuit_plan tool schema and the deterministic "
-    "validation error codes. Preserve the user's requested topology and values. Use SI-base-unit numbers."
+    "Correct the seven flat submit_circuit_plan arguments so they satisfy the tool schema and "
+    "the deterministic validation error codes. Preserve the user's requested topology and values. "
+    "Use SI-base-unit numbers, every required field, exact zero for irrelevant fields, and no "
+    "additional or nested fields."
 )
 
 
@@ -372,7 +317,75 @@ def _extract_tool_plan_candidate(envelope: Any) -> str:
         )
     if len(arguments.encode("utf-8")) > _MAX_CONTENT_BYTES:
         raise _planner_error("planner.provider.response_oversized")
-    return _extract_plan_candidate(arguments)
+    return _extract_flat_plan_candidate(arguments)
+
+
+def _extract_flat_plan_candidate(content: str) -> str:
+    stripped = content.strip(" \t\r\n")
+    if not stripped or stripped.startswith("```"):
+        raise _planner_error("planner.output.invalid_json")
+    values = _decode_json_text(stripped, provider=False)
+    if type(values) is not dict:
+        raise _planner_error("planner.output.invalid_json")
+
+    keys = set(values)
+    if keys == _FLAT_VALUE_KEYS:
+        return _flat_values_to_candidate(values)
+    if keys == {"plan"} or keys == _CANDIDATE_KEYS:
+        return _extract_plan_candidate(stripped)
+
+    extra = keys - _FLAT_VALUE_KEYS
+    if extra:
+        raise _planner_error("planner.output.invalid_json", ("candidate", "unknown_field"))
+    missing = sorted(_FLAT_VALUE_KEYS - keys, key=str)
+    if missing:
+        raise _planner_error("planner.output.invalid_json", ("candidate", missing[0]))
+    raise _planner_error("planner.output.invalid_json")
+
+
+def _flat_values_to_candidate(values: dict[str, Any]) -> str:
+    topology = values["topology"]
+    if topology in {"rc_low_pass", "rc_high_pass"}:
+        _require_zero(values, "input_voltage_volts")
+        _require_zero(values, "resistance_top_ohms")
+        _require_zero(values, "resistance_bottom_ohms")
+        analysis = "ac"
+        parameters = {
+            "resistance_ohms": values["resistance_ohms"],
+            "capacitance_farads": values["capacitance_farads"],
+        }
+    elif topology == "resistive_divider":
+        _require_zero(values, "resistance_ohms")
+        _require_zero(values, "capacitance_farads")
+        analysis = "dc"
+        parameters = {
+            "input_voltage_volts": values["input_voltage_volts"],
+            "resistance_top_ohms": values["resistance_top_ohms"],
+            "resistance_bottom_ohms": values["resistance_bottom_ohms"],
+        }
+    elif type(topology) is str:
+        raise _planner_error("planner.plan.unsupported_topology", ("topology",))
+    else:
+        raise _planner_error("planner.plan.invalid", ("topology",))
+
+    candidate = {
+        "schema_version": "1.0",
+        "topology": topology,
+        "analysis": analysis,
+        "parameters": parameters,
+        "requested_frequencies_hz": values["requested_frequencies_hz"],
+        "assumptions": [],
+    }
+    try:
+        return json.dumps(candidate, allow_nan=False, separators=(",", ":"))
+    except (TypeError, ValueError):
+        raise _planner_error("planner.output.invalid_json") from None
+
+
+def _require_zero(values: dict[str, Any], key: str) -> None:
+    value = values[key]
+    if type(value) not in {int, float} or not math.isfinite(value) or value != 0:
+        raise _planner_error("planner.plan.invalid", (key,))
 
 
 def _extract_plan_candidate(content: str) -> str:
