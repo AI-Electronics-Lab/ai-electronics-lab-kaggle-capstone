@@ -10,7 +10,6 @@ from typing import Any
 import httpx2 as httpx
 
 from ai_electronics_lab.contracts import CircuitPlan
-
 from .openrouter import (
     CircuitPlannerError,
     OpenRouterPlannerConfig,
