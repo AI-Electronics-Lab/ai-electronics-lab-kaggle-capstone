@@ -183,9 +183,9 @@ the scanner, version, command, date, commit SHA, and safe result.
 
 ## Dependency and CI posture
 
-Python dependencies are locked with `uv.lock`. `scripts/verify.sh` and GitHub CI install the locked
-`dev` and optional `adk` dependency groups, run Ruff, execute the full pytest suite, and perform the
-package-import smoke check where defined by the script.
+Python dependencies are locked with `uv.lock`. Both `scripts/verify.sh` and GitHub CI install the
+locked `dev` and optional `adk` dependency groups, run Ruff, and execute the full pytest suite.
+`scripts/verify.sh` additionally performs a package-import smoke check.
 
 Automated tests use deterministic fakes and fixtures for provider and simulator boundaries where
 appropriate. CI does not require a real OpenRouter key or live external model request.
@@ -218,10 +218,10 @@ The implementation and detailed contracts remain the source of truth:
 
 - `AGENTS.md`;
 - `specs/architecture.md`;
-- `specs/circuit-plan.md`;
+- `specs/circuit-plan-contract.md`;
 - `specs/bounded-openrouter-planner.md`;
 - `specs/simulation-assembly.md`;
-- `specs/simulation-deck.md`;
+- `specs/bounded-simulation-deck.md`;
 - `specs/bounded-ngspice-runner.md`;
 - `specs/bounded-ngspice-raw-parser.md`;
 - `specs/deterministic-evidence-verifier.md`;
