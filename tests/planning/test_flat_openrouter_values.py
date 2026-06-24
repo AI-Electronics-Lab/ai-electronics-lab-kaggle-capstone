@@ -23,6 +23,20 @@ def flat_low_pass(**overrides):
     return values
 
 
+def legacy_low_pass():
+    return {
+        "schema_version": "1.0",
+        "topology": "rc_low_pass",
+        "analysis": "ac",
+        "parameters": {
+            "resistance_ohms": 1000.0,
+            "capacitance_farads": 0.000001,
+        },
+        "requested_frequencies_hz": [10.0, 100.0, 1000.0],
+        "assumptions": [],
+    }
+
+
 def decode(values):
     content = json.dumps(values, separators=(",", ":"))
     candidate = _extract_flat_plan_candidate(content)
@@ -92,6 +106,22 @@ def test_nonzero_irrelevant_rc_field_is_rejected():
     assert caught.value.path == ("input_voltage_volts",)
 
 
+def test_huge_irrelevant_integer_is_rejected_without_overflow():
+    with pytest.raises(CircuitPlannerError) as caught:
+        decode(flat_low_pass(input_voltage_volts=10**4000))
+
+    assert caught.value.code == "planner.plan.invalid"
+    assert caught.value.path == ("input_voltage_volts",)
+
+
+def test_non_string_topology_is_rejected_without_type_error():
+    with pytest.raises(CircuitPlannerError) as caught:
+        decode(flat_low_pass(topology=[]))
+
+    assert caught.value.code == "planner.plan.invalid"
+    assert caught.value.path == ("topology",)
+
+
 def test_invented_nested_plan_shape_is_rejected():
     invented = {
         "plan": {
@@ -106,3 +136,10 @@ def test_invented_nested_plan_shape_is_rejected():
 
     assert caught.value.code == "planner.output.invalid_json"
     assert caught.value.path == ("candidate", "unknown_field")
+
+
+def test_exact_legacy_plan_wrapper_remains_bounded_and_accepted():
+    plan = decode({"plan": legacy_low_pass()})
+
+    assert plan.topology == "rc_low_pass"
+    assert plan.analysis == "ac"
