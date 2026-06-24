@@ -422,3 +422,16 @@
   evidence documentation.
 - Verification: `bash scripts/verify.sh` passed; Ruff passed; 634 tests passed; package
   import smoke passed.
+
+## Phase 4 deterministic evaluation report
+
+- Evaluated canonical `main` commit `3a6a8201fc2e18b92ec43f3407f852e8d85c8197`.
+- Collected and categorized all 634 deterministic tests across ADK, contracts,
+  orchestration, planning, simulation, Skill, verification, and web boundaries.
+- Documented representative supported-topology, unsupported-input, malformed-input,
+  provider-failure, safe-error, and deterministic verdict-policy cases.
+- Recorded explicit limitations: no coverage percentage, model-quality benchmark, latency benchmark,
+  live-provider availability claim, public-hosting claim, or formal proof.
+- Added `docs/evaluation.md` and linked it from the README and submission-evidence checklist.
+- Verification: `bash scripts/verify.sh` passed; Ruff passed; 634 tests passed with
+  5 deprecation warnings; package import smoke passed.
