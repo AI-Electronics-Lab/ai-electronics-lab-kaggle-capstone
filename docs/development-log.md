@@ -376,3 +376,21 @@
 - Updated the submission-evidence checklist to require only reproducible finished-scope and later
   alignment evidence.
 - Added ADR-022 to freeze the product scope. No runtime source, dependency, or behavior changed.
+
+## Phase 2 verified circuit simulation Agent Skill
+
+- Added a real project Skill at `.agents/skills/verified-circuit-simulation/SKILL.md`.
+- Defined truthful trigger and non-trigger conditions for repository development tasks.
+- Recorded the frozen three-topology scope, GitHub source-of-truth policy, spec-first workflow,
+  canonical CircuitPlan boundary, deterministic runner/parser/verifier authority, safe commands,
+  expected outputs, non-goals, and mandatory stop conditions.
+- Added progressive trust-boundary and validation-case references instead of duplicating repository
+  specifications.
+- Recorded three trigger prompts, three non-trigger prompts, one successful repository-guidance
+  task, one refusal/scope-boundary task, and secret/capability checks.
+- Added focused automated validation for Skill structure, references, safety, scope, cases, and
+  README status.
+- Updated the README to report the Skill as included while leaving the ADK adapter explicitly
+  unimplemented.
+- Added ADR-023. No electronics runtime source, dependency, lockfile, web behavior, simulation
+  behavior, or CI workflow changed.

@@ -100,7 +100,8 @@ a package-import smoke test.
 
 ## Current competition-alignment status
 
-- Agent Skill: not yet included; planned as a thin development-agent guide around the existing core.
+- Agent Skill: included at `.agents/skills/verified-circuit-simulation/SKILL.md`; it guides
+  development agents without changing runtime authority or product behavior.
 - Google ADK adapter: not yet included; planned as a thin adapter that calls the existing
   orchestration entry point.
 - The deterministic simulation core remains the source of truth for both future layers.
