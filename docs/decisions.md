@@ -216,3 +216,19 @@ This narrows rather than expands model authority: the provider extracts topology
 only. It still cannot define connectivity, netlists, commands, schema versions, analyses,
 assumptions, evidence, verification results, or verdicts. Preserve one bounded repair attempt and
 the exact legacy candidate parser only as a bounded compatibility path.
+
+## ADR-022: Freeze the finished capstone product scope
+
+Treat the three-topology natural-language-to-verdict workflow as the finished product. Public
+documentation must describe only RC low-pass, RC high-pass, and unloaded resistive-divider support,
+the bounded OpenRouter planner, deterministic CircuitPlan validation, trusted SPICE generation,
+bounded local ngspice execution, parsed measurements, schematic rendering, safe stage tracing, and
+deterministic PASS/WARN/FAIL verification.
+
+Do not present plots, downloadable bundles, comparison runs, parent/child history, prose
+explanations, persistence, memory, MCP, cloud deployment, BJT circuits, or an offline
+natural-language planner as implemented capabilities.
+
+Future Agent Skill and Google ADK work must remain thin competition-alignment layers around the
+existing orchestration entry point. They must not duplicate the deterministic electronics core or
+expand the frozen product behavior.
