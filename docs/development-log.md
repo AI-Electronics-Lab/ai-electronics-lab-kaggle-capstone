@@ -394,3 +394,19 @@
   unimplemented.
 - Added ADR-023. No electronics runtime source, dependency, lockfile, web behavior, simulation
   behavior, or CI workflow changed.
+
+## Phase 3 thin Google ADK workflow adapter
+
+- Selected the verified optional `google-adk>=2.3,<2.4` dependency range.
+- Used the public graph `Workflow`, direct `FunctionTool` node support, `Runner`, and
+  `InMemorySessionService`; no private graph or tool-node import is used.
+- Registered one tool named `run_verified_circuit_simulation` with exactly one `prompt` argument.
+- Delegated the tool to `run_bounded_agent_orchestration()` without repeating deterministic
+  electronics, provider, repair, simulation, parser, verifier, or safe-error logic.
+- Added an ephemeral convenience runner that returns only the closed adapter success/error schema.
+- Kept the existing FastAPI application separate from ADK and kept Google ADK optional for ordinary
+  application installation.
+- Added deterministic tests using fake planner, runner, and parser seams; no API key or live ngspice
+  execution is required.
+- Updated GitHub CI to install both the `dev` and `adk` extras before collecting the full test suite,
+  matching `scripts/verify.sh`.

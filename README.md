@@ -57,8 +57,11 @@ without an API key, but a live natural-language request requires configured Open
 ```bash
 git clone https://github.com/AI-Electronics-Lab/ai-electronics-lab-kaggle-capstone.git
 cd ai-electronics-lab-kaggle-capstone
-uv sync --extra dev --frozen
+uv sync --extra dev --extra adk --frozen
 ```
+
+The optional `adk` extra installs the Google ADK adapter and its tests. The ordinary FastAPI
+application does not import or start ADK.
 
 Create the local environment file:
 
@@ -102,9 +105,11 @@ a package-import smoke test.
 
 - Agent Skill: included at `.agents/skills/verified-circuit-simulation/SKILL.md`; it guides
   development agents without changing runtime authority or product behavior.
-- Google ADK adapter: not yet included; planned as a thin adapter that calls the existing
-  orchestration entry point.
-- The deterministic simulation core remains the source of truth for both future layers.
+- Google ADK adapter: included at `src/ai_electronics_lab/adk/`; it uses the public ADK graph
+  `Workflow` and a registered `FunctionTool` to call the existing orchestration entry point.
+- The adapter does not add Gemini, another planner, product memory, an ADK service, or another
+  simulation or verification implementation.
+- The deterministic simulation core remains the source of truth for both alignment layers.
 
 ## Explicit limitations
 
