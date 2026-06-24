@@ -27,7 +27,8 @@
 
     button,
     input,
-    select {
+    select,
+    textarea {
       font: inherit;
     }
 
@@ -113,6 +114,32 @@
       margin: 18px 0;
     }
 
+    .section-divider {
+      margin: 20px 0;
+      border: 0;
+      border-top: 1px solid #dbe3ee;
+    }
+
+    .stage-trace-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .stage-trace-item {
+      padding: 10px 14px;
+      border-top: 1px solid #e3e8f0;
+      color: #42536a;
+      font-size: 0.84rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .stage-trace-item:first-child {
+      border-top: 0;
+    }
+
     .example-button {
       min-height: 62px;
       padding: 9px;
@@ -146,7 +173,8 @@
     }
 
     input,
-    select {
+    select,
+    textarea {
       width: 100%;
       border: 1px solid #c4cfde;
       border-radius: 10px;
@@ -155,8 +183,14 @@
       color: #16243a;
     }
 
+    textarea {
+      min-height: 118px;
+      resize: vertical;
+    }
+
     input:focus,
-    select:focus {
+    select:focus,
+    textarea:focus {
       border-color: #2563a8;
       outline: 3px solid rgba(37, 99, 168, 0.13);
     }
@@ -391,125 +425,184 @@
     <div class="grid">
       <section class="card" aria-labelledby="request-heading">
         <div class="card-body">
-          <h2 id="request-heading">Task / input</h2>
+          <h2 id="request-heading">Bounded orchestration and manual simulation</h2>
           <p class="muted">
-            Choose one frozen topology and enter explicit engineering values.
+            Use a natural-language prompt for bounded orchestration, or enter explicit
+            engineering values for the manual simulation route.
           </p>
 
-          <div class="examples" aria-label="Supported examples">
-            <button
-              class="example-button"
-              type="button"
-              data-example="rc_low_pass"
-            >
-              Low-pass example
-            </button>
-            <button
-              class="example-button"
-              type="button"
-              data-example="rc_high_pass"
-            >
-              High-pass example
-            </button>
-            <button
-              class="example-button"
-              type="button"
-              data-example="resistive_divider"
-            >
-              Divider example
-            </button>
-          </div>
+          <section aria-labelledby="prompt-heading">
+            <h3 id="prompt-heading">Natural-language prompt</h3>
+            <div class="examples" aria-label="Supported prompt examples">
+              <button
+                class="example-button"
+                type="button"
+                data-prompt-example="divider"
+              >
+                Divider prompt
+              </button>
+              <button
+                class="example-button"
+                type="button"
+                data-prompt-example="low_pass"
+              >
+                Low-pass prompt
+              </button>
+              <button
+                class="example-button"
+                type="button"
+                data-prompt-example="high_pass"
+              >
+                High-pass prompt
+              </button>
+            </div>
 
-          <form id="request-form">
-            <label>
-              Circuit topology
-              <select id="topology" name="topology">
-                <option value="rc_low_pass">RC low-pass filter</option>
-                <option value="rc_high_pass">RC high-pass filter</option>
-                <option value="resistive_divider">
-                  Resistive voltage divider
-                </option>
-              </select>
-            </label>
-
-            <div id="rc-fields" class="fields">
+            <form id="orchestration-form">
               <label>
-                Resistance, ohms
-                <input
-                  id="resistance-ohms"
-                  type="number"
-                  min="1"
-                  max="1000000000"
-                  step="any"
-                  value="1000"
-                >
-              </label>
-              <label>
-                Capacitance, farads
-                <input
-                  id="capacitance-farads"
-                  type="number"
-                  min="0.000000000000001"
-                  max="1"
-                  step="any"
-                  value="0.000001"
-                >
-              </label>
-              <label>
-                Frequencies, hertz
-                <input
-                  id="frequencies-hz"
-                  type="text"
-                  value="10, 100, 1000"
-                >
+                Prompt
+                <textarea
+                  id="prompt-input"
+                  name="prompt"
+                  placeholder="Describe the circuit in plain language."
+                ></textarea>
                 <span class="field-help">
-                  One to eight strictly increasing comma-separated values.
+                  The prompt is trimmed, bounded, and validated before orchestration starts.
                 </span>
               </label>
+
+              <button
+                id="orchestrate-button"
+                class="run-button"
+                type="submit"
+              >
+                Run Orchestration
+              </button>
+            </form>
+          </section>
+
+          <hr class="section-divider">
+
+          <section aria-labelledby="simulation-heading">
+            <h3 id="simulation-heading">Manual simulation</h3>
+            <p class="muted">
+              Choose one frozen topology and enter explicit engineering values.
+            </p>
+
+            <div class="examples" aria-label="Supported simulation examples">
+              <button
+                class="example-button"
+                type="button"
+                data-example="rc_low_pass"
+              >
+                Low-pass example
+              </button>
+              <button
+                class="example-button"
+                type="button"
+                data-example="rc_high_pass"
+              >
+                High-pass example
+              </button>
+              <button
+                class="example-button"
+                type="button"
+                data-example="resistive_divider"
+              >
+                Divider example
+              </button>
             </div>
 
-            <div id="divider-fields" class="fields hidden">
+            <form id="request-form">
               <label>
-                Input voltage, volts
-                <input
-                  id="input-voltage-volts"
-                  type="number"
-                  step="any"
-                  value="5"
-                >
+                Circuit topology
+                <select id="topology" name="topology">
+                  <option value="rc_low_pass">RC low-pass filter</option>
+                  <option value="rc_high_pass">RC high-pass filter</option>
+                  <option value="resistive_divider">
+                    Resistive voltage divider
+                  </option>
+                </select>
               </label>
-              <label>
-                Top resistance, ohms
-                <input
-                  id="resistance-top-ohms"
-                  type="number"
-                  min="1"
-                  max="1000000000"
-                  step="any"
-                  value="1000"
-                >
-              </label>
-              <label>
-                Bottom resistance, ohms
-                <input
-                  id="resistance-bottom-ohms"
-                  type="number"
-                  min="1"
-                  max="1000000000"
-                  step="any"
-                  value="2000"
-                >
-              </label>
-            </div>
 
-            <button
-              id="run-button"
-              class="run-button"
-              type="submit"
-            >
-              Run Simulation
-            </button>
-          </form>
+              <div id="rc-fields" class="fields">
+                <label>
+                  Resistance, ohms
+                  <input
+                    id="resistance-ohms"
+                    type="number"
+                    min="1"
+                    max="1000000000"
+                    step="any"
+                    value="1000"
+                  >
+                </label>
+                <label>
+                  Capacitance, farads
+                  <input
+                    id="capacitance-farads"
+                    type="number"
+                    min="0.000000000000001"
+                    max="1"
+                    step="any"
+                    value="0.000001"
+                  >
+                </label>
+                <label>
+                  Frequencies, hertz
+                  <input
+                    id="frequencies-hz"
+                    type="text"
+                    value="10, 100, 1000"
+                  >
+                  <span class="field-help">
+                    One to eight strictly increasing comma-separated values.
+                  </span>
+                </label>
+              </div>
+
+              <div id="divider-fields" class="fields hidden">
+                <label>
+                  Input voltage, volts
+                  <input
+                    id="input-voltage-volts"
+                    type="number"
+                    step="any"
+                    value="5"
+                  >
+                </label>
+                <label>
+                  Top resistance, ohms
+                  <input
+                    id="resistance-top-ohms"
+                    type="number"
+                    min="1"
+                    max="1000000000"
+                    step="any"
+                    value="1000"
+                  >
+                </label>
+                <label>
+                  Bottom resistance, ohms
+                  <input
+                    id="resistance-bottom-ohms"
+                    type="number"
+                    min="1"
+                    max="1000000000"
+                    step="any"
+                    value="2000"
+                  >
+                </label>
+              </div>
+
+              <button
+                id="run-button"
+                class="run-button"
+                type="submit"
+              >
+                Run Simulation
+              </button>
+            </form>
+          </section>
 
           <p class="notice">
             Results are deterministic ngspice evidence with fixed analytical PASS/WARN/FAIL
@@ -532,6 +625,14 @@
             aria-live="polite"
           >
             <div id="status-line" class="status-line"></div>
+
+            <section id="stage-trace-panel" class="panel hidden">
+              <h3>Safe stage trace</h3>
+              <div id="stage-trace-summary" class="verification-summary">
+                <p id="stage-trace-overall"></p>
+              </div>
+              <ul id="stage-trace-list" class="stage-trace-list"></ul>
+            </section>
 
             <section class="panel">
               <h3>Validated CircuitPlan</h3>
@@ -599,15 +700,21 @@
   <script>
     "use strict";
 
+    const orchestrationForm = document.getElementById("orchestration-form");
+    const promptInput = document.getElementById("prompt-input");
+    const orchestrationRunButton = document.getElementById("orchestrate-button");
     const topology = document.getElementById("topology");
     const rcFields = document.getElementById("rc-fields");
     const dividerFields = document.getElementById("divider-fields");
-    const form = document.getElementById("request-form");
-    const runButton = document.getElementById("run-button");
+    const simulationForm = document.getElementById("request-form");
+    const simulationRunButton = document.getElementById("run-button");
     const emptyOutput = document.getElementById("output-empty");
     const outputContent = document.getElementById("output-content");
     const errorOutput = document.getElementById("error-output");
     const statusLine = document.getElementById("status-line");
+    const stageTracePanel = document.getElementById("stage-trace-panel");
+    const stageTraceOverall = document.getElementById("stage-trace-overall");
+    const stageTraceList = document.getElementById("stage-trace-list");
     const planOutput = document.getElementById("plan-output");
     const deckOutput = document.getElementById("deck-output");
     const resultsBody = document.getElementById("results-body");
@@ -618,7 +725,13 @@
 
     let schematicUrl = null;
 
-    const examples = {
+    const promptExamples = {
+      divider: "Design a resistive divider that produces 2.5 V from a 5 V input.",
+      low_pass: "Analyze an RC low-pass filter with 1 kΩ resistance, 1 µF capacitance, and frequencies 10, 100, and 1000 Hz.",
+      high_pass: "Analyze an RC high-pass filter with 2.2 kΩ resistance, 100 nF capacitance, and frequencies 100, 1000, and 10000 Hz."
+    };
+
+    const simulationExamples = {
       rc_low_pass: {
         topology: "rc_low_pass",
         resistance_ohms: 1000,
@@ -646,8 +759,8 @@
       dividerFields.classList.toggle("hidden", !isDivider);
     }
 
-    function loadExample(name) {
-      const example = examples[name];
+    function loadSimulationExample(name) {
+      const example = simulationExamples[name];
       setTopology(example.topology);
 
       if (example.topology === "resistive_divider") {
@@ -665,6 +778,11 @@
         document.getElementById("frequencies-hz").value =
           example.frequencies_hz.join(", ");
       }
+    }
+
+    function loadPromptExample(name) {
+      promptInput.value = promptExamples[name];
+      promptInput.focus();
     }
 
     function readNumber(id) {
@@ -725,6 +843,9 @@
         schematicUrl = null;
       }
 
+      stageTracePanel.classList.add("hidden");
+      stageTraceList.replaceChildren();
+      stageTraceOverall.textContent = "";
       deckOutput.replaceChildren();
       resultsBody.replaceChildren();
       verificationRuns.replaceChildren();
@@ -813,6 +934,35 @@
       }
     }
 
+    function renderStageTrace(stageTrace) {
+      stageTraceList.replaceChildren();
+
+      if (!Array.isArray(stageTrace) || stageTrace.length === 0) {
+        stageTracePanel.classList.add("hidden");
+        stageTraceOverall.textContent = "";
+        return;
+      }
+
+      stageTracePanel.classList.remove("hidden");
+      stageTraceOverall.textContent = `Closed trace vocabulary · ${stageTrace.length} events`;
+
+      for (const event of stageTrace) {
+        const item = document.createElement("li");
+        const parts = [`${event.stage}`, `${event.status}`];
+
+        if (typeof event.code === "string") {
+          parts.push(`code=${event.code}`);
+        }
+        if (Array.isArray(event.path) && event.path.length > 0) {
+          parts.push(`path=${event.path.join(".")}`);
+        }
+
+        item.className = "stage-trace-item";
+        item.textContent = parts.join(" · ");
+        stageTraceList.appendChild(item);
+      }
+    }
+
     function renderVerification(verification) {
       verificationRuns.replaceChildren();
       verificationOverall.textContent = `Overall status: ${verification.status}`;
@@ -891,7 +1041,8 @@
       emptyOutput.classList.add("hidden");
       outputContent.classList.remove("hidden");
 
-      statusLine.textContent = payload.notice;
+      statusLine.textContent = payload.notice ?? `Overall status: ${payload.status}`;
+      renderStageTrace(payload.stage_trace);
       planOutput.textContent = JSON.stringify(payload.plan, null, 2);
       renderDeck(payload.deck);
       renderResults(payload.results);
@@ -910,18 +1061,67 @@
       () => setTopology(topology.value)
     );
 
-    for (const button of document.querySelectorAll("[data-example]")) {
+    for (const button of document.querySelectorAll("[data-prompt-example]")) {
       button.addEventListener(
         "click",
-        () => loadExample(button.dataset.example)
+        () => loadPromptExample(button.dataset.promptExample)
       );
     }
 
-    form.addEventListener("submit", async (event) => {
+    for (const button of document.querySelectorAll("[data-example]")) {
+      button.addEventListener(
+        "click",
+        () => loadSimulationExample(button.dataset.example)
+      );
+    }
+
+    orchestrationForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       errorOutput.classList.add("hidden");
-      runButton.disabled = true;
-      runButton.textContent = "Running…";
+      orchestrationRunButton.disabled = true;
+      orchestrationRunButton.textContent = "Running…";
+
+      try {
+        const prompt = promptInput.value.trim();
+        const response = await fetch("/api/orchestrate", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({prompt})
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          const error = payload.error || {};
+          const location =
+            Array.isArray(error.path) && error.path.length > 0
+              ? ` (${error.path.join(".")})`
+              : "";
+
+          throw new Error(
+            `${error.message || "Orchestration failed."}${location}`
+          );
+        }
+
+        renderSuccess(payload);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Orchestration failed.";
+
+        showError(message);
+      } finally {
+        orchestrationRunButton.disabled = false;
+        orchestrationRunButton.textContent = "Run Orchestration";
+      }
+    });
+
+    simulationForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorOutput.classList.add("hidden");
+      simulationRunButton.disabled = true;
+      simulationRunButton.textContent = "Running…";
 
       try {
         const requestBody = buildRequest();
@@ -954,8 +1154,8 @@
 
         showError(message);
       } finally {
-        runButton.disabled = false;
-        runButton.textContent = "Run Simulation";
+        simulationRunButton.disabled = false;
+        simulationRunButton.textContent = "Run Simulation";
       }
     });
 
