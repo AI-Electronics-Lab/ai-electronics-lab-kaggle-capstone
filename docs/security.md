@@ -177,9 +177,10 @@ Repository and development rules prohibit committing credentials, internal URLs,
 operational logs, or user data. Code must not enumerate the environment, print `.env`, or embed the
 key in logs, exceptions, object representations, snapshots, or response payloads.
 
-This document does not claim that the required current-tree and full-Git-history secret scans have
-already been completed. Scanner evidence is a separate Phase 4 release-evidence task and must record
-the scanner, version, command, date, commit SHA, and safe result.
+On 2026-06-24, Gitleaks 8.30.1 scanned the tracked tree and full reachable Git history at
+commit `2d09e7be962d1e46893db36a4e2a7334e0920720`. Both scans returned exit code 0 with zero findings. See
+[`secret-scan-evidence.md`](secret-scan-evidence.md) for the safe reproducible record. Raw JSON
+reports remain outside the repository.
 
 ## Dependency and CI posture
 
@@ -205,7 +206,7 @@ The project does not claim protection against every threat. In particular:
   finished scope;
 - no formal threat-model review, penetration test, sandbox certification, supply-chain attestation,
   or cryptographic verification of the ngspice executable is claimed;
-- no current-tree or Git-history secret-scan result is claimed until separately executed and recorded;
+- the recorded secret scan is detector- and ruleset-based and applies only to the named commit; it does not guarantee that every secret format or future commit is clean;
 - unsupported circuit topologies and arbitrary user-authored SPICE are intentionally rejected rather
   than sandboxed.
 
