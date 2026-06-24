@@ -198,3 +198,21 @@ Treat tool arguments as untrusted bounded JSON. Accept exactly one tool call, re
 and unexpected tool names, then pass the decoded candidate through the existing exact field checks,
 `CircuitPlan` construction, and deterministic validator. This transport change does not authorize
 arbitrary tools or change the one-repair limit, simulation, evidence, or verdict boundaries.
+
+## ADR-021: Flat provider extraction, deterministic CircuitPlan construction
+
+Do not ask the default free model to author the nested canonical `CircuitPlan` schema. Live tests
+showed that the endpoint accepted the forced tool but ignored the nested `anyOf` structure and
+invented fields such as `components`, `circuit_type`, and nested `analysis` data on both the initial
+and repair attempts.
+
+Use one exact flat seven-field tool schema instead. Require every topology-neutral field, require
+exact numeric zero for fields irrelevant to the selected topology, and reject extra or missing
+fields locally. Deterministic code derives schema version, analysis kind, topology-specific
+parameter names, and an empty assumptions list before invoking the existing canonical
+`CircuitPlan` validator.
+
+This narrows rather than expands model authority: the provider extracts topology and numeric values
+only. It still cannot define connectivity, netlists, commands, schema versions, analyses,
+assumptions, evidence, verification results, or verdicts. Preserve one bounded repair attempt and
+the exact legacy candidate parser only as a bounded compatibility path.

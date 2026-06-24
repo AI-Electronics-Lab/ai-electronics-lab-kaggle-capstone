@@ -7,37 +7,40 @@ import httpx2 as httpx
 import pytest
 
 from ai_electronics_lab.planning import CircuitPlannerError, OpenRouterPlannerConfig
-from ai_electronics_lab.planning.structured_openrouter import (
-    _extract_plan_candidate,
-    _plan_circuit_request_with_transport,
-)
+from ai_electronics_lab.planning.structured_openrouter import _plan_circuit_request_with_transport
 
-SECRET = "sk-test-secret"
 PROMPT = "Analyze an RC low-pass filter with explicit component values."
 TOOL_NAME = "submit_circuit_plan"
+FLAT_KEYS = {
+    "topology",
+    "resistance_ohms",
+    "capacitance_farads",
+    "input_voltage_volts",
+    "resistance_top_ohms",
+    "resistance_bottom_ohms",
+    "requested_frequencies_hz",
+}
 
 
 def config() -> OpenRouterPlannerConfig:
-    return OpenRouterPlannerConfig(api_key=SECRET, max_tokens=800)
+    return OpenRouterPlannerConfig(api_key="fixture-value", max_tokens=800)
 
 
-def low_pass_plan(**overrides):
-    plan = {
-        "schema_version": "1.0",
+def flat_low_pass(**overrides):
+    values = {
         "topology": "rc_low_pass",
-        "analysis": "ac",
-        "parameters": {
-            "resistance_ohms": 1000.0,
-            "capacitance_farads": 0.000001,
-        },
+        "resistance_ohms": 1000.0,
+        "capacitance_farads": 0.000001,
+        "input_voltage_volts": 0.0,
+        "resistance_top_ohms": 0.0,
+        "resistance_bottom_ohms": 0.0,
         "requested_frequencies_hz": [10.0, 100.0, 1000.0],
-        "assumptions": ["Ideal passive components."],
     }
-    plan.update(overrides)
-    return plan
+    values.update(overrides)
+    return values
 
 
-def envelope(plan, *, tool_name=TOOL_NAME, content=None) -> dict:
+def envelope(arguments, *, tool_name=TOOL_NAME, content=None) -> dict:
     return {
         "choices": [
             {
@@ -50,7 +53,7 @@ def envelope(plan, *, tool_name=TOOL_NAME, content=None) -> dict:
                             "type": "function",
                             "function": {
                                 "name": tool_name,
-                                "arguments": json.dumps({"plan": plan}, separators=(",", ":")),
+                                "arguments": json.dumps(arguments, separators=(",", ":")),
                             },
                         }
                     ],
@@ -62,7 +65,7 @@ def envelope(plan, *, tool_name=TOOL_NAME, content=None) -> dict:
 
 def response(payload) -> httpx.Response:
     encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    return httpx.Response(200, content=b"\n  " + encoded)
+    return httpx.Response(200, content=encoded)
 
 
 def transport_from_responses(*responses):
@@ -79,8 +82,8 @@ def run(coro):
     return asyncio.run(coro)
 
 
-def test_forced_tool_request_returns_valid_plan_and_requires_tool_support():
-    transport, calls = transport_from_responses(response(envelope(low_pass_plan())))
+def test_flat_forced_tool_request_returns_valid_plan():
+    transport, calls = transport_from_responses(response(envelope(flat_low_pass())))
 
     plan = run(
         _plan_circuit_request_with_transport(
@@ -91,27 +94,29 @@ def test_forced_tool_request_returns_valid_plan_and_requires_tool_support():
     )
 
     assert plan.topology == "rc_low_pass"
+    assert plan.analysis == "ac"
+    assert plan.requested_frequencies_hz == (10.0, 100.0, 1000.0)
     assert len(calls) == 1
+
     body = json.loads(calls[0].content)
     assert "response_format" not in body
     assert body["provider"] == {"require_parameters": True}
-    assert body["reasoning"] == {"effort": "low", "exclude": True}
     assert body["tool_choice"] == {
         "type": "function",
         "function": {"name": TOOL_NAME},
     }
-    assert len(body["tools"]) == 1
-    function = body["tools"][0]["function"]
-    assert function["name"] == TOOL_NAME
-    assert function["parameters"]["required"] == ["plan"]
-    assert function["parameters"]["additionalProperties"] is False
+    parameters = body["tools"][0]["function"]["parameters"]
+    assert set(parameters["properties"]) == FLAT_KEYS
+    assert set(parameters["required"]) == FLAT_KEYS
+    assert parameters["additionalProperties"] is False
+    assert "anyOf" not in json.dumps(parameters)
 
 
-def test_forced_tool_repair_uses_only_stable_validation_context():
-    invalid = low_pass_plan(requested_frequencies_hz=[1000.0, 100.0, 10.0])
+def test_flat_repair_uses_only_stable_error_context():
+    invalid = flat_low_pass(requested_frequencies_hz=[1000.0, 100.0, 10.0])
     transport, calls = transport_from_responses(
         response(envelope(invalid)),
-        response(envelope(low_pass_plan())),
+        response(envelope(flat_low_pass())),
     )
 
     plan = run(
@@ -124,17 +129,35 @@ def test_forced_tool_repair_uses_only_stable_validation_context():
 
     assert plan.topology == "rc_low_pass"
     assert len(calls) == 2
-    repair_body = json.loads(calls[1].content)
-    repair_message = repair_body["messages"][1]["content"]
+    repair_message = json.loads(calls[1].content)["messages"][1]["content"]
     assert "planner.plan.invalid" in repair_message
     assert "requested_frequencies_hz" in repair_message
-    assert "1000.0" not in repair_message
-    assert repair_body["tool_choice"]["function"]["name"] == TOOL_NAME
+    assert "[1000.0,100.0,10.0]" not in repair_message
 
 
-def test_forced_tool_response_rejects_unexpected_tool_name():
+def test_nonzero_irrelevant_field_can_use_single_repair():
+    transport, calls = transport_from_responses(
+        response(envelope(flat_low_pass(input_voltage_volts=5.0))),
+        response(envelope(flat_low_pass())),
+    )
+
+    plan = run(
+        _plan_circuit_request_with_transport(
+            PROMPT,
+            config=config(),
+            transport=transport,
+        )
+    )
+
+    assert plan.topology == "rc_low_pass"
+    assert len(calls) == 2
+    repair_message = json.loads(calls[1].content)["messages"][1]["content"]
+    assert "input_voltage_volts" in repair_message
+
+
+def test_unexpected_tool_name_is_rejected():
     transport, _calls = transport_from_responses(
-        response(envelope(low_pass_plan(), tool_name="other_tool"))
+        response(envelope(flat_low_pass(), tool_name="other_tool"))
     )
 
     with pytest.raises(CircuitPlannerError) as caught:
@@ -149,9 +172,9 @@ def test_forced_tool_response_rejects_unexpected_tool_name():
     assert caught.value.code == "planner.provider.envelope_invalid"
 
 
-def test_forced_tool_response_rejects_parallel_prose_content():
+def test_parallel_prose_is_rejected():
     transport, _calls = transport_from_responses(
-        response(envelope(low_pass_plan(), content="untrusted prose"))
+        response(envelope(flat_low_pass(), content="untrusted prose"))
     )
 
     with pytest.raises(CircuitPlannerError) as caught:
@@ -167,23 +190,10 @@ def test_forced_tool_response_rejects_parallel_prose_content():
     assert caught.value.path == ("choices", 0, "message", "content")
 
 
-def test_structured_wrapper_must_contain_exactly_one_plan_key():
-    content = json.dumps(
-        {"plan": low_pass_plan(), "extra": True},
-        separators=(",", ":"),
-    )
+def test_system_prompt_defines_flat_defaults_and_zero_policy():
+    transport, calls = transport_from_responses(response(envelope(flat_low_pass())))
 
-    with pytest.raises(CircuitPlannerError) as caught:
-        _extract_plan_candidate(content)
-
-    assert caught.value.code == "planner.output.invalid_json"
-    assert caught.value.path == ("candidate", "unknown_field")
-
-
-def test_forced_tool_system_prompt_defines_deterministic_defaults():
-    transport, calls = transport_from_responses(response(envelope(low_pass_plan())))
-
-    plan = run(
+    run(
         _plan_circuit_request_with_transport(
             "Show a low-pass filter.",
             config=config(),
@@ -191,11 +201,7 @@ def test_forced_tool_system_prompt_defines_deterministic_defaults():
         )
     )
 
-    assert plan.topology == "rc_low_pass"
-    body = json.loads(calls[0].content)
-    system_message = body["messages"][0]["content"]
-    assert "submit_circuit_plan tool" in system_message
+    system_message = json.loads(calls[0].content)["messages"][0]["content"]
+    assert "seven flat schema fields" in system_message
     assert "deterministic demonstration defaults" in system_message
-    assert "1000 ohms" in system_message
-    assert "0.000001 farads" in system_message
-    assert "[10,100,1000]" in system_message
+    assert "zero for all three divider-only fields" in system_message
