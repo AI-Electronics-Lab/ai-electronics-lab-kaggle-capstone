@@ -10,15 +10,15 @@ from typing import Any
 import httpx2 as httpx
 
 from ai_electronics_lab.contracts import CircuitPlan
+
 from .openrouter import (
-    CircuitPlannerError,
-    OpenRouterPlannerConfig,
     _CANDIDATE_KEYS,
     _CHAT_COMPLETIONS_URL,
     _CONNECT_TIMEOUT_SECONDS,
     _MAX_REQUEST_BYTES,
     _READ_TIMEOUT_SECONDS,
-    _build_request_body as _legacy_build_request_body,
+    CircuitPlannerError,
+    OpenRouterPlannerConfig,
     _candidate_to_plan,
     _decode_json_bytes,
     _decode_json_text,
@@ -29,6 +29,9 @@ from .openrouter import (
     _validate_config_instance,
     _validate_prompt,
     load_openrouter_planner_config,
+)
+from .openrouter import (
+    _build_request_body as _legacy_build_request_body,
 )
 
 
