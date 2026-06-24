@@ -13,6 +13,7 @@ from ai_electronics_lab.contracts import (
     require_valid_circuit_plan,
 )
 from ai_electronics_lab.planning import (
+    CircuitPlannerError,
     OpenRouterPlannerConfig,
     load_openrouter_planner_config,
     plan_circuit_request,
@@ -73,6 +74,14 @@ _ERROR_MESSAGES = {
     'orchestration.verification_invalid': 'The deterministic simulation evidence could not be verified.',
     'orchestration.internal_error': 'The bounded orchestration pipeline could not complete.',
 }
+_PLANNER_INVALID_CODES = frozenset(
+    {
+        'planner.output.invalid_json',
+        'planner.plan.unsupported_topology',
+        'planner.plan.invalid',
+        'planner.repair.exhausted',
+    }
+)
 _ERROR_STATUS_CODES = {
     'orchestration.request.content_type': 400,
     'orchestration.request.encoding': 400,
@@ -255,6 +264,18 @@ def run_bounded_agent_orchestration(
         )
     except BoundedAgentOrchestrationError:
         raise
+    except CircuitPlannerError as exc:
+        if exc.code in _PLANNER_INVALID_CODES:
+            code = 'orchestration.planner.invalid'
+            status_code = 422
+        else:
+            code = 'orchestration.planner.unavailable'
+            status_code = 503
+        raise BoundedAgentOrchestrationError(
+            code,
+            exc.path,
+            status_code=status_code,
+        ) from None
     except CircuitPlanValidationError as exc:
         error = exc.errors[0] if exc.errors else None
         raise BoundedAgentOrchestrationError(
