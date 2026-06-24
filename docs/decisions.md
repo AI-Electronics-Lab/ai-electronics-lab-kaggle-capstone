@@ -232,3 +232,19 @@ natural-language planner as implemented capabilities.
 Future Agent Skill and Google ADK work must remain thin competition-alignment layers around the
 existing orchestration entry point. They must not duplicate the deterministic electronics core or
 expand the frozen product behavior.
+
+## ADR-023: Guidance-only verified circuit simulation Skill
+
+Add one repository Agent Skill under `.agents/skills/verified-circuit-simulation/` to guide coding
+agents through safe development, review, testing, and documentation tasks around the existing
+three-topology workflow.
+
+The Skill is guidance-only. It is not imported by runtime Python, does not execute ngspice, and has
+no authority to construct connectivity, trusted SPICE, commands, paths, evidence, tolerances, or
+verdicts. It uses progressive disclosure through a concise main Skill file, a trust-boundary
+reference, and recorded trigger/non-trigger validation cases.
+
+The merged GitHub `main` branch, repository specifications, implementation, and tests remain the
+sources of truth. The Skill must direct agents back to those files, preserve spec-first development,
+and stop on unexplained or out-of-scope dirty state, divergence, scope expansion, secret
+exposure, or failed verification.
