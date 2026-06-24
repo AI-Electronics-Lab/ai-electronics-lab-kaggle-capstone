@@ -107,6 +107,9 @@ a package-import smoke test.
 The deterministic test distribution, representative evaluation cases, verdict-policy evidence, and
 limitations are recorded in [`docs/evaluation.md`](docs/evaluation.md).
 
+Fresh-clone installation, localhost startup, and one live supported-prompt result are recorded in
+[`docs/fresh-clone-evidence.md`](docs/fresh-clone-evidence.md).
+
 ## Current competition-alignment status
 
 - Agent Skill: included at `.agents/skills/verified-circuit-simulation/SKILL.md`; it guides
