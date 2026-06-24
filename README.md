@@ -40,6 +40,9 @@ The model cannot author trusted connectivity, executable netlists, subprocess ar
 paths, simulation evidence, analytical verification, or the final verdict. Deterministic code owns
 all of those boundaries.
 
+See [`docs/security.md`](docs/security.md) for the public security architecture, disclosure policy,
+resource boundaries, secret-handling rules, and explicitly documented limitations.
+
 ## Requirements
 
 - Linux;
