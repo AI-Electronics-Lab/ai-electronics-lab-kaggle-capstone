@@ -42,4 +42,5 @@ jobs:
           path: |
             pytest-output.txt
             pytest-status.txt
+            tests/planning/test_openrouter.py
           if-no-files-found: error
