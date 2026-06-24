@@ -435,3 +435,19 @@
 - Added `docs/evaluation.md` and linked it from the README and submission-evidence checklist.
 - Verification: `bash scripts/verify.sh` passed; Ruff passed; 634 tests passed with
   5 deprecation warnings; package import smoke passed.
+
+## Phase 4 fresh-clone reproducibility evidence
+
+- Audited canonical `main` commit `ae678731879a9d9a9c799c3d51d60f443fab7170` from a new public HTTPS clone in a temporary
+  directory.
+- Installed locked `dev` and `adk` dependencies with `uv`, ran Ruff, passed
+  634 tests with 5 deprecation warnings, and passed the
+  package-import smoke check.
+- Started the FastAPI application on `127.0.0.1:18801` and completed one live supported
+  resistive-divider prompt through OpenRouter and the bounded orchestration pipeline.
+- The live result returned HTTP 200, orchestration `PASS`, deterministic verification `PASS`, and a
+  closed 12-event trace from `request.received` through `request.completed`.
+- Verified the ignored `.env` mode, checked audit artifacts for API-key disclosure, and confirmed the
+  fresh-clone tracked worktree remained clean.
+- Recorded the operating system, Python, uv, Git, ngspice, planner model, safe commands, results,
+  limitations, and evaluated commit in `docs/fresh-clone-evidence.md`.

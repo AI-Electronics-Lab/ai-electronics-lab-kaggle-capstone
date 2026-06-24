@@ -4,8 +4,8 @@ Record only reproducible, reviewable, and non-sensitive evidence.
 
 ## Required evidence
 
-- clean-clone installation;
-- localhost application startup;
+- recorded clean-clone installation evidence in `docs/fresh-clone-evidence.md`;
+- recorded localhost startup and one supported live prompt smoke in `docs/fresh-clone-evidence.md`;
 - one successful prompt run for each of the three supported topologies;
 - one safely rejected unsupported request;
 - bounded ngspice execution evidence;
