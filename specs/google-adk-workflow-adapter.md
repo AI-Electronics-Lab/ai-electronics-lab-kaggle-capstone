@@ -33,19 +33,20 @@ therefore restricted to the verified 2.3 minor line.
 
 The Phase 3 implementation is limited to:
 
-1. `README.md`
-2. `docs/decisions.md`
-3. `docs/development-log.md`
-4. `pyproject.toml`
-5. `scripts/verify.sh`
-6. `specs/architecture.md`
-7. `specs/google-adk-workflow-adapter.md`
-8. `src/ai_electronics_lab/adk/__init__.py`
-9. `src/ai_electronics_lab/adk/tools.py`
-10. `src/ai_electronics_lab/adk/workflow.py`
-11. `tests/adk/test_workflow.py`
-12. `tests/skills/test_verified_circuit_simulation_skill.py`
-13. `uv.lock`
+1. `.github/workflows/ci.yml`
+2. `README.md`
+3. `docs/decisions.md`
+4. `docs/development-log.md`
+5. `pyproject.toml`
+6. `scripts/verify.sh`
+7. `specs/architecture.md`
+8. `specs/google-adk-workflow-adapter.md`
+9. `src/ai_electronics_lab/adk/__init__.py`
+10. `src/ai_electronics_lab/adk/tools.py`
+11. `src/ai_electronics_lab/adk/workflow.py`
+12. `tests/adk/test_workflow.py`
+13. `tests/skills/test_verified_circuit_simulation_skill.py`
+14. `uv.lock`
 
 The Skill test changes only because its README assertion previously required the ADK adapter to be
 absent.
@@ -133,8 +134,8 @@ entry point. The ADK layer does not add another provider call or alter the one-r
 The ordinary FastAPI application does not import `ai_electronics_lab.adk`, does not start an ADK
 service, and remains importable with only the existing development dependencies installed.
 
-The verification script selects both the `dev` and `adk` extras so the complete repository test
-suite remains reproducible.
+Both `scripts/verify.sh` and the GitHub CI workflow select the `dev` and `adk` extras before
+running the complete repository test suite.
 
 ## Required tests
 

@@ -408,3 +408,5 @@
   application installation.
 - Added deterministic tests using fake planner, runner, and parser seams; no API key or live ngspice
   execution is required.
+- Updated GitHub CI to install both the `dev` and `adk` extras before collecting the full test suite,
+  matching `scripts/verify.sh`.
