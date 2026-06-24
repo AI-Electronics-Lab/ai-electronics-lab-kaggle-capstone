@@ -345,6 +345,8 @@ def _extract_flat_plan_candidate(content: str) -> str:
 
 def _flat_values_to_candidate(values: dict[str, Any]) -> str:
     topology = values["topology"]
+    if type(topology) is not str:
+        raise _planner_error("planner.plan.invalid", ("topology",))
     if topology in {"rc_low_pass", "rc_high_pass"}:
         _require_zero(values, "input_voltage_volts")
         _require_zero(values, "resistance_top_ohms")
@@ -363,10 +365,8 @@ def _flat_values_to_candidate(values: dict[str, Any]) -> str:
             "resistance_top_ohms": values["resistance_top_ohms"],
             "resistance_bottom_ohms": values["resistance_bottom_ohms"],
         }
-    elif type(topology) is str:
-        raise _planner_error("planner.plan.unsupported_topology", ("topology",))
     else:
-        raise _planner_error("planner.plan.invalid", ("topology",))
+        raise _planner_error("planner.plan.unsupported_topology", ("topology",))
 
     candidate = {
         "schema_version": "1.0",
@@ -384,7 +384,13 @@ def _flat_values_to_candidate(values: dict[str, Any]) -> str:
 
 def _require_zero(values: dict[str, Any], key: str) -> None:
     value = values[key]
-    if type(value) not in {int, float} or not math.isfinite(value) or value != 0:
+    if type(value) is int:
+        valid = value == 0
+    elif type(value) is float:
+        valid = math.isfinite(value) and value == 0
+    else:
+        valid = False
+    if not valid:
         raise _planner_error("planner.plan.invalid", (key,))
 
 
