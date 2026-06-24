@@ -7,6 +7,7 @@ name = "ai-electronics-lab-kaggle-capstone"
 version = "0.1.0"
 description = "Evidence-first circuit simulation agent with deterministic SPICE validation."
 readme = "README.md"
+license-files = ["LICENSE", "LICENSE-DOCUMENTATION", "LICENSING.md"]
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "fastapi>=0.138,<0.139",

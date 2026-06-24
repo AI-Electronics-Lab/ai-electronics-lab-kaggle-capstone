@@ -263,3 +263,21 @@ The adapter canonicalizes known orchestration failures through the existing erro
 collapses unexpected adapter failures to `orchestration.internal_error`. It does not duplicate
 prompt validation, provider transport, CircuitPlan validation, circuit construction, SPICE
 generation, ngspice execution, parsing, tolerances, evidence, or verdict logic.
+
+## ADR-025: Split software and documentation licensing
+
+License software source, tests, scripts, workflow configuration, and machine-consumed project
+configuration under Apache License 2.0.
+
+License original repository documentation and original project media under Creative Commons
+Attribution 4.0 International.
+
+Keep the complete Apache license in `LICENSE`, the complete CC BY 4.0 legal code in
+`LICENSE-DOCUMENTATION`, and the file-scope and attribution rules in `LICENSING.md`.
+
+Because distribution files have different file-scoped licenses, do not declare one global license
+expression in `pyproject.toml`. List the legal files through `license-files` instead.
+
+Third-party software, services, interfaces, trademarks, logos, and externally sourced material retain
+their respective terms. This decision changes repository licensing and metadata only; it does not
+change product behavior or deterministic authority.

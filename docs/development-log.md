@@ -451,3 +451,23 @@
   fresh-clone tracked worktree remained clean.
 - Recorded the operating system, Python, uv, Git, ngspice, planner model, safe commands, results,
   limitations, and evaluated commit in `docs/fresh-clone-evidence.md`.
+
+## Phase 5 final repository sanitation — edit checkpoint
+
+- Verified the logged-in competition Overview, Rules, submission requirements, track choices, media
+  controls, project-link controls, scoring concepts, deadline, and one-submission limit.
+- Confirmed the clean Phase 5 branch was created from canonical main commit
+  `e8e01fc8e470ebbd3369e37d9c20ae788bbb864d`.
+- Removed the private username and LAN address from the historical localhost UI specification.
+- Replaced stale prose-explanation wording with the implemented structured-evidence boundary.
+- Added explicit problem, solution, user-value, competition-evidence, and licensing sections to the
+  README.
+- Selected Apache License 2.0 for software and CC BY 4.0 for original documentation and project
+  media, with explicit file scope and third-party exclusions.
+- Converted `docs/submission-evidence.md` from a future checklist into a completed public evidence
+  index with a separate list of pending Kaggle assets.
+- Added no product feature, topology, provider policy, simulation behavior, verification policy,
+  route, persistence layer, or deployment surface.
+- Package build and legal-file inspection passed; Ruff passed; 634 tests passed with five
+  dependency deprecation warnings; the package-import smoke and `git diff --check` passed.
+- Commit, push, pull-request creation, and merge remain pending.
