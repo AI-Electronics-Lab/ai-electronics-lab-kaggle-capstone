@@ -3,6 +3,21 @@
 AI Electronics Lab turns a bounded natural-language request for a small supported circuit into
 reproducible SPICE evidence and a deterministic engineering verdict.
 
+## Problem
+
+Natural-language circuit requests cross a sensitive boundary between probabilistic model output and
+executable engineering work. Allowing a model to invent circuit connectivity, SPICE commands,
+measurements, or pass/fail conclusions would make results difficult to review and unsafe to trust.
+
+## Solution and user value
+
+AI Electronics Lab limits the model to bounded topology and numeric intent. Deterministic code then
+validates the request, constructs the supported circuit, runs ngspice under a fixed policy, parses
+bounded evidence, and independently checks the measurements.
+
+This gives engineers and learners a compact, reproducible workflow while keeping model output
+separate from trusted engineering evidence.
+
 ## Frozen product scope
 
 The finished capstone supports exactly three circuit topologies:
@@ -119,6 +134,27 @@ Fresh-clone installation, localhost startup, and one live supported-prompt resul
 - The adapter does not add Gemini, another planner, product memory, an ADK service, or another
   simulation or verification implementation.
 - The deterministic simulation core remains the source of truth for both alignment layers.
+
+## Competition evidence
+
+- [`docs/security.md`](docs/security.md) documents the trust boundaries, secret handling, resource
+  limits, and safe-disclosure policy.
+- [`docs/evaluation.md`](docs/evaluation.md) records the deterministic test distribution,
+  representative cases, and verdict-policy evidence.
+- [`docs/fresh-clone-evidence.md`](docs/fresh-clone-evidence.md) records locked installation,
+  localhost startup, ngspice execution, and one live supported request.
+- [`docs/submission-evidence.md`](docs/submission-evidence.md) maps competition requirements to
+  reviewable public evidence and identifies the remaining external submission assets.
+
+## Licensing
+
+Software source code, tests, scripts, workflow configuration, and machine-consumed project files are
+licensed under the [Apache License 2.0](LICENSE).
+
+Original repository documentation and original project media are licensed under
+[Creative Commons Attribution 4.0 International](LICENSE-DOCUMENTATION).
+
+See [`LICENSING.md`](LICENSING.md) for the exact file scope, attribution guidance, and exclusions.
 
 ## Explicit limitations
 

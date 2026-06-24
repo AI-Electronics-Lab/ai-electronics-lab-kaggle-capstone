@@ -22,7 +22,7 @@ approved architectural decision changes.
 3. Deterministic code builds the netlist.
 4. ngspice performs the simulation.
 5. Deterministic checks and a verifier inspect the evidence.
-6. The explanation uses only verified structured evidence.
+6. Public interfaces expose only verified structured evidence and deterministic verdicts.
 
 ## Development workflow
 

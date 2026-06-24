@@ -185,7 +185,7 @@ From the repository root:
 
 Windows SSH tunnel:
 
-    ssh -L 18800:127.0.0.1:18800 antigravityuser@192.168.1.104
+    ssh -L 18800:127.0.0.1:18800 developer@development-host
 
 Browser address:
 
