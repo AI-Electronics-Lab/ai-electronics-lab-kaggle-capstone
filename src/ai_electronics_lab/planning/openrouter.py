@@ -494,13 +494,14 @@ def _decode_json_text(text: str, *, provider: bool) -> Any:
         parse_float=_parse_json_float(code),
         parse_int=_parse_json_int(code),
     )
+    decoded_text = text.lstrip(" \t\r\n") if provider else text
     try:
-        value, end = decoder.raw_decode(text)
+        value, end = decoder.raw_decode(decoded_text)
     except CircuitPlannerError:
         raise
     except (JSONDecodeError, OverflowError, TypeError, ValueError):
         raise _planner_error(code) from None
-    if text[end:].strip():
+    if decoded_text[end:].strip():
         raise _planner_error(code)
     return value
 
