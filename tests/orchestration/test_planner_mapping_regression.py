@@ -37,3 +37,15 @@ def test_planner_failures_map_to_stable_orchestration_errors(
         "The bounded planner returned an invalid CircuitPlan.",
         "The bounded planner could not complete.",
     }
+
+
+def test_default_planner_configuration_failure_maps_to_unavailable(monkeypatch) -> None:
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+
+    with pytest.raises(BoundedAgentOrchestrationError) as caught:
+        run_bounded_agent_orchestration("Design a supported circuit")
+
+    assert caught.value.code == "orchestration.planner.unavailable"
+    assert caught.value.status_code == 503
+    assert caught.value.path == ("OPENROUTER_API_KEY",)
+    assert caught.value.message == "The bounded planner could not complete."
