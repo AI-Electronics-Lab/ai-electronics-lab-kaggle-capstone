@@ -5,8 +5,8 @@ from .openrouter import (
     CircuitPlannerError,
     OpenRouterPlannerConfig,
     load_openrouter_planner_config,
-    plan_circuit_request,
 )
+from .structured_openrouter import plan_circuit_request
 
 __all__ = [
     "OPENROUTER_PLANNER_VERSION",
