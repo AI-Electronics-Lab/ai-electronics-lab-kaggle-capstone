@@ -227,7 +227,10 @@ def run_bounded_agent_orchestration(
     bounded_prompt = _validate_prompt(prompt)
     planner_config = None if config is None else config.planner_config
     if planner is plan_circuit_request and planner_config is None:
-        planner_config = load_openrouter_planner_config()
+        try:
+            planner_config = load_openrouter_planner_config()
+        except CircuitPlannerError as exc:
+            raise _map_planner_error(exc) from None
 
     stage_trace = [
         BoundedAgentTraceEvent('request.received', 'started'),
@@ -265,17 +268,7 @@ def run_bounded_agent_orchestration(
     except BoundedAgentOrchestrationError:
         raise
     except CircuitPlannerError as exc:
-        if exc.code in _PLANNER_INVALID_CODES:
-            code = 'orchestration.planner.invalid'
-            status_code = 422
-        else:
-            code = 'orchestration.planner.unavailable'
-            status_code = 503
-        raise BoundedAgentOrchestrationError(
-            code,
-            exc.path,
-            status_code=status_code,
-        ) from None
+        raise _map_planner_error(exc) from None
     except CircuitPlanValidationError as exc:
         error = exc.errors[0] if exc.errors else None
         raise BoundedAgentOrchestrationError(
@@ -314,6 +307,19 @@ def run_bounded_agent_orchestration(
         ) from None
     except Exception as exc:
         raise BoundedAgentOrchestrationError('orchestration.internal_error', (), None, status_code=500) from exc
+
+def _map_planner_error(exc: CircuitPlannerError) -> BoundedAgentOrchestrationError:
+    if exc.code in _PLANNER_INVALID_CODES:
+        code = 'orchestration.planner.invalid'
+        status_code = 422
+    else:
+        code = 'orchestration.planner.unavailable'
+        status_code = 503
+    return BoundedAgentOrchestrationError(
+        code,
+        exc.path,
+        status_code=status_code,
+    )
 
 def _validate_prompt(prompt: object) -> str:
     if type(prompt) is not str:
