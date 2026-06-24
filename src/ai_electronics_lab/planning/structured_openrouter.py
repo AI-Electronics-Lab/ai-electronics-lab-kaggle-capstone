@@ -14,6 +14,7 @@ from ai_electronics_lab.contracts import CircuitPlan
 from .openrouter import (
     CircuitPlannerError,
     OpenRouterPlannerConfig,
+    _CANDIDATE_KEYS,
     _CHAT_COMPLETIONS_URL,
     _CONNECT_TIMEOUT_SECONDS,
     _MAX_REQUEST_BYTES,
@@ -325,9 +326,14 @@ def _extract_plan_candidate(content: str) -> str:
     if not stripped or stripped.startswith("```"):
         raise _planner_error("planner.output.invalid_json")
     wrapper = _decode_json_text(stripped, provider=False)
-    if type(wrapper) is not dict or set(wrapper) != {"plan"}:
+    if type(wrapper) is not dict:
+        raise _planner_error("planner.output.invalid_json")
+    if set(wrapper) == {"plan"}:
+        candidate = wrapper["plan"]
+    elif set(wrapper) == _CANDIDATE_KEYS:
+        candidate = wrapper
+    else:
         raise _planner_error("planner.output.invalid_json", ("candidate", "unknown_field"))
-    candidate = wrapper["plan"]
     if type(candidate) is not dict:
         raise _planner_error("planner.output.invalid_json", ("candidate",))
     try:
