@@ -9,6 +9,8 @@ from typing import Any
 
 import httpx2 as httpx
 
+from ai_electronics_lab.contracts import CircuitPlan
+
 from .openrouter import (
     CircuitPlannerError,
     OpenRouterPlannerConfig,
@@ -18,12 +20,12 @@ from .openrouter import (
     _READ_TIMEOUT_SECONDS,
     _build_request_body as _legacy_build_request_body,
     _candidate_to_plan,
+    _decode_json_bytes,
     _decode_json_text,
     _extract_provider_content,
     _is_repairable,
     _planner_error,
     _read_bounded_response,
-    _repair_prompt,
     _validate_config_instance,
     _validate_prompt,
     load_openrouter_planner_config,
@@ -179,19 +181,28 @@ _REPAIR_MESSAGE = (
 )
 
 
+def _stable_repair_context(
+    prompt: str,
+    repair_errors: Sequence[CircuitPlannerError],
+) -> str:
+    context = {
+        "original_bounded_prompt": prompt,
+        "stable_validation_errors": [
+            {"code": error.code, "path": list(error.path)} for error in repair_errors[:8]
+        ],
+    }
+    return json.dumps(context, ensure_ascii=True, separators=(",", ":"))
+
+
 def _build_request_body(
     prompt: str,
     config: OpenRouterPlannerConfig,
     repair_errors: Sequence[CircuitPlannerError],
 ) -> dict[str, Any]:
     legacy = _legacy_build_request_body(prompt, config, ())
+    user_content = prompt
     if repair_errors:
-        user_content = (
-            f"{_REPAIR_MESSAGE}\n"
-            f"{_repair_prompt(prompt, repair_errors).split('Repair context JSON:\n', 1)[1]}"
-        )
-    else:
-        user_content = prompt
+        user_content = f"{_REPAIR_MESSAGE}\n{_stable_repair_context(prompt, repair_errors)}"
     legacy["messages"] = [
         {"role": "system", "content": _SYSTEM_MESSAGE},
         {"role": "user", "content": user_content},
@@ -205,7 +216,7 @@ async def plan_circuit_request(
     prompt: str,
     *,
     config: OpenRouterPlannerConfig | None = None,
-):
+) -> CircuitPlan:
     """Return one validated CircuitPlan using OpenRouter structured outputs."""
 
     return await _plan_circuit_request_with_transport(prompt, config=config, transport=None)
@@ -216,7 +227,7 @@ async def _plan_circuit_request_with_transport(
     *,
     config: OpenRouterPlannerConfig | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
-):
+) -> CircuitPlan:
     bounded_prompt = _validate_prompt(prompt)
     planner_config = config if config is not None else load_openrouter_planner_config()
     try:
@@ -304,10 +315,7 @@ async def _request_candidate(
     except httpx.RequestError:
         raise _planner_error("planner.provider.network_error") from None
 
-    envelope = _decode_json_text(
-        response_bytes.decode("utf-8", errors="strict").lstrip(" \t\r\n"),
-        provider=True,
-    )
+    envelope = _decode_json_bytes(response_bytes, provider=True)
     content = _extract_provider_content(envelope)
     return _extract_plan_candidate(content)
 
