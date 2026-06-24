@@ -627,7 +627,11 @@ def _safe_orchestration_result_dict(result: object) -> dict[str, Any]:
             "The bounded orchestration pipeline could not complete.",
             500,
         )
-    return json.loads(result.to_json())
+
+    payload = json.loads(result.to_json())
+    payload["results"] = payload["parsed_results"]
+    payload["schematic_svg"] = _render_schematic(result.plan)
+    return payload
 
 
 def _pairs_to_dict(

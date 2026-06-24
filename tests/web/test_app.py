@@ -191,6 +191,8 @@ def test_home_page_is_self_contained_and_hardened() -> None:
 
     assert response.status_code == 200
     assert "AI Electronics Lab" in response.text
+    assert "Use bounded OpenRouter planning" in response.text
+    assert "No LLM, cloud service" not in response.text
     assert "Run Orchestration" in response.text
     assert "Run Simulation" in response.text
     assert 'id="orchestration-form"' in response.text
@@ -713,6 +715,12 @@ def test_orchestrate_route_preserves_manual_simulation_route() -> None:
     assert orchestration_response.json()['version'] == '1.0'
     assert 'explanation' not in orchestration_response.json()
     assert orchestration_response.json()['stage_trace'][0]['stage'] == 'request.received'
+    assert (
+        orchestration_response.json()['results']
+        == orchestration_response.json()['parsed_results']
+    )
+    assert orchestration_response.json()['results']['runs'][0]['vout_voltage']['real'] == 2.5
+    assert orchestration_response.json()['schematic_svg'].startswith('<svg')
     assert captured['prompt'] == 'Design a resistive divider'
     assert simulation_response.status_code == 200
     assert simulation_response.json()['status'] == 'ok'
