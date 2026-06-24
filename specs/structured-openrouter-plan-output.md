@@ -1,62 +1,111 @@
-# Structured OpenRouter Plan Tool Output
+# Flat OpenRouter Circuit-Value Tool Output
 
 ## Purpose
 
-The live OpenRouter planner must not rely on prompt wording alone to produce the strict six-field
-`CircuitPlan` candidate. The provider request forces one fixed function call while the existing
-deterministic `CircuitPlan` validation remains the final authority.
+The live OpenRouter planner must not be trusted to author the nested six-field `CircuitPlan`
+shape directly. The provider is used only to extract a small flat set of circuit values. Local
+deterministic code then constructs the canonical `CircuitPlan` and runs the existing validator.
+
+## Live finding
+
+The default free model accepts one forced function tool, but it did not reliably follow the prior
+nested `anyOf` schema. For the same explicit RC low-pass prompt, two consecutive bounded attempts
+returned invented nested fields such as `circuit_type`, `components`, and nested `analysis` data.
+
+A live probe with a flat seven-field tool schema returned exactly the required keys and correct SI
+values:
+
+```json
+{
+  "topology": "rc_low_pass",
+  "resistance_ohms": 1000,
+  "capacitance_farads": 0.000001,
+  "input_voltage_volts": 0,
+  "resistance_top_ohms": 0,
+  "resistance_bottom_ohms": 0,
+  "requested_frequencies_hz": [10, 100, 1000]
+}
+```
 
 ## Provider request
 
-The request keeps the existing bounded model, timeout, token, TLS, redirect, proxy-isolation,
-body-size, and response-size controls. It additionally sends:
+The request retains the existing bounded model, timeout, token, TLS, redirect, proxy-isolation,
+body-size, response-size, and one-repair controls. It sends:
 
 - exactly one function tool named `submit_circuit_plan`;
-- the topology-specific plan JSON Schema as that tool's `parameters`;
+- one flat object schema with seven required fields;
 - an exact `tool_choice` forcing `submit_circuit_plan`;
-- `provider.require_parameters = true` so OpenRouter selects only endpoints supporting `tools` and
-  `tool_choice`.
+- `provider.require_parameters = true`;
+- no `response_format`.
 
-The request does not send `response_format`. The default free model's current OpenRouter endpoint
-accepts forced tool calls but rejects the `json_schema` response-format parameter with
-`No endpoints found that can handle the requested parameters`.
+The seven fields are:
 
-The tool schema root is an exact object containing one `plan` property. That property is a nested
-`anyOf` covering exactly these supported variants:
+1. `topology`;
+2. `resistance_ohms`;
+3. `capacitance_farads`;
+4. `input_voltage_volts`;
+5. `resistance_top_ohms`;
+6. `resistance_bottom_ohms`;
+7. `requested_frequencies_hz`.
 
-1. `rc_low_pass` with `analysis = "ac"`, resistance, capacitance, and AC frequencies;
-2. `rc_high_pass` with `analysis = "ac"`, resistance, capacitance, and AC frequencies;
-3. `resistive_divider` with `analysis = "dc"`, input voltage, top resistance, bottom resistance, and
-   an empty frequency list.
+Every field is required and additional properties are forbidden.
 
-Each variant rejects additional fields and uses numeric SI-base-unit values.
+## Zero policy
 
-## Deterministic defaults
+The flat schema has one stable shape for every topology.
 
-An underspecified demonstration prompt uses these planner defaults:
+For `rc_low_pass` and `rc_high_pass`:
 
-- RC low-pass or high-pass: `1000` ohms, `0.000001` farads, frequencies `[10, 100, 1000]` hertz;
-- resistive divider: `5` volts, `1000` ohms top, `1000` ohms bottom.
+- `resistance_ohms` and `capacitance_farads` carry the requested values;
+- `input_voltage_volts`, `resistance_top_ohms`, and `resistance_bottom_ohms` must be exact finite
+  numeric zero;
+- `requested_frequencies_hz` must contain positive, unique, strictly increasing frequencies.
 
-These defaults create a demonstrable plan; they do not bypass deterministic validation.
+For `resistive_divider`:
 
-## Candidate boundary
+- `input_voltage_volts`, `resistance_top_ohms`, and `resistance_bottom_ohms` carry the requested
+  values;
+- `resistance_ohms` and `capacitance_farads` must be exact finite numeric zero;
+- `requested_frequencies_hz` must be empty.
 
-The accepted provider envelope must contain exactly one choice whose finish reason is `tool_calls`.
-Its message must contain no parallel prose and exactly one function call named
-`submit_circuit_plan`. The bounded function `arguments` string must decode to either:
+Nonzero, boolean, non-finite, or nonnumeric irrelevant fields are rejected locally.
 
-```json
-{"plan":{"schema_version":"1.0","topology":"rc_low_pass","analysis":"ac","parameters":{"resistance_ohms":1000,"capacitance_farads":0.000001},"requested_frequencies_hz":[10,100,1000],"assumptions":[]}}
-```
+## Deterministic construction
 
-or the already-valid legacy exact six-field candidate shape. Both shapes are converted to the same
-compact candidate JSON and passed through the existing `_candidate_to_plan()` and
-`require_valid_circuit_plan()` path.
+Provider tool arguments remain untrusted JSON. After exact bounded decoding and exact-key checks,
+local code derives:
 
-Unknown wrapper fields, Markdown, prose content, missing or multiple tool calls, unexpected tool
-names, malformed JSON, duplicate keys, non-finite numbers, unsupported topologies, invalid parameter
-combinations, unordered frequencies, and invalid assumptions remain rejected.
+- `schema_version = "1.0"`;
+- `analysis = "ac"` for RC topologies or `"dc"` for a divider;
+- the topology-specific `parameters` mapping;
+- `assumptions = []`.
+
+Only relevant flat values are copied into the canonical candidate. The result is serialized and
+passed through the existing `_candidate_to_plan()` and `require_valid_circuit_plan()` path.
+
+The model does not choose schema versions, analyses, parameter names, assumptions, topology
+connectivity, netlists, simulator commands, evidence, verification results, or engineering verdicts.
+
+## Compatibility
+
+The response parser continues to accept the previously supported exact legacy `{"plan": ...}`
+wrapper and exact six-field candidate shape. Those compatibility forms remain subject to exact-key
+checks and the same deterministic validator. Invented nested plan structures remain rejected.
+
+## Envelope boundary
+
+The accepted provider response must contain:
+
+- exactly one choice;
+- `finish_reason = "tool_calls"`;
+- no parallel prose content;
+- exactly one function call;
+- the exact function name `submit_circuit_plan`;
+- one bounded nonempty argument string.
+
+Malformed JSON, duplicate keys, non-finite numbers, extra or missing flat keys, unexpected tools,
+multiple calls, prose content, unsupported topologies, invalid values, invalid irrelevant-field
+zeros, unordered frequencies, and all invalid canonical plans are rejected.
 
 ## Repair
 
@@ -66,18 +115,29 @@ At most one repair request is allowed. Repair input contains only:
 - stable validation error codes;
 - stable bounded paths.
 
-The repair request forces the same fixed tool. Raw model output, provider metadata, credentials,
-exception text, and invalid values are not copied into the repair prompt or public errors.
+Raw invalid values, raw model output, provider metadata, credentials, exception text, and private
+configuration are not copied into repair prompts or public errors.
+
+## Deterministic defaults
+
+An underspecified demonstration prompt uses these planner defaults:
+
+- RC low-pass or high-pass: `1000` ohms, `0.000001` farads, frequencies `[10, 100, 1000]` hertz;
+- resistive divider: `5` volts, `1000` ohms top, `1000` ohms bottom.
+
+Defaults remain untrusted provider output until deterministic construction and validation complete.
 
 ## Acceptance
 
 The implementation must verify with mocked transport tests that:
 
-- the request omits `response_format`, defines one bounded tool, forces its exact name, and requires
+- the request defines one exact flat tool, forces its name, omits `response_format`, and requires
   provider parameter support;
-- a valid forced-tool low-pass candidate returns a validated `CircuitPlan`;
-- a semantic validation failure can be repaired once using only stable context;
-- an unexpected tool name or parallel prose content is rejected;
-- wrapper objects with extra keys are rejected;
-- underspecified demonstration prompts receive deterministic defaults;
-- the complete existing Ruff and pytest suites remain green.
+- valid flat RC and divider values become canonical validated `CircuitPlan` objects;
+- nonzero irrelevant fields are rejected and can use the single bounded repair attempt;
+- semantic validation failures can repair using only stable context;
+- extra, missing, or invented nested fields are rejected;
+- unexpected tool names and parallel prose are rejected;
+- the exact bounded legacy plan wrapper remains compatible;
+- the complete Ruff and pytest suites remain green;
+- all three live natural-language UI examples succeed before explanation-layer work resumes.
